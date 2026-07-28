@@ -1,0 +1,2207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CARS99 — Insurance CRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{
+  --black:#111111; --soft:#4b4b4b; --white:#ffffff; --paper:#f7f7f7; --line:#e4e4e4;
+  --red:#d5001c; --red-dark:#a30015; --red-bg:#fdeaec;
+  --green:#1f7a4d; --green-bg:#e8f4ee; --amber:#8a6100; --amber-bg:#fdf3d7;
+  --radius:10px;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --sans:'Archivo',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:15px}
+body{font-family:var(--sans);background:var(--paper);color:var(--black);min-height:100vh}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:.92rem;color:var(--black)}
+:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+
+/* ---------- top bar ---------- */
+.topbar{background:var(--black);color:#fff;display:flex;align-items:center;gap:14px;
+  padding:0 20px;position:sticky;top:0;z-index:40;min-height:54px}
+.brand{display:flex;align-items:center;gap:10px;cursor:pointer}
+.logo{font-weight:900;font-size:1.3rem;letter-spacing:.01em;font-stretch:85%}
+.logo em{font-style:normal;color:var(--red)}
+.brand .sub{font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;opacity:.6}
+.topbar .spacer{flex:1}
+.rolechip{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:800;
+  border:1px solid #3c3c3c;border-radius:20px;padding:3px 11px;color:#ddd}
+.rolechip.admin{border-color:var(--red);color:#ff90a0}
+.conn{display:flex;align-items:center;gap:7px;font-size:.76rem;opacity:.9}
+.conn .dot{width:8px;height:8px;border-radius:50%;background:#777}
+.conn.live .dot{background:#3ecf7a}
+.conn.demo .dot{background:var(--red)}
+
+.btn{border:1px solid var(--line);background:var(--white);color:var(--black);
+  border-radius:8px;padding:7px 14px;font-size:.86rem;font-weight:700;
+  display:inline-flex;align-items:center;gap:6px;transition:background .15s}
+.btn:hover{background:#efefef}
+.btn.primary{background:var(--red);border-color:var(--red);color:#fff}
+.btn.primary:hover{background:var(--red-dark)}
+.btn.big{padding:11px 22px;font-size:.95rem}
+.btn.ghost-dark{background:transparent;border-color:#3c3c3c;color:#fff}
+.btn.ghost-dark:hover{background:#262626}
+.btn.danger{color:var(--red);border-color:#f0bfc4}
+.btn.danger:hover{background:var(--red-bg)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+.page{display:none}
+.page.active{display:block}
+
+/* ---------- login ---------- */
+.loginwrap{max-width:400px;margin:11vh auto;padding:0 16px}
+.logincard{background:var(--white);border:1px solid var(--line);border-radius:16px;
+  padding:34px 30px;text-align:center;border-top:5px solid var(--red)}
+.logincard .biglogo{font-weight:900;font-size:2rem;font-stretch:85%}
+.logincard .biglogo em{font-style:normal;color:var(--red)}
+.logincard .tag{font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--soft);margin:2px 0 24px}
+.logincard input{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:9px;
+  text-align:center;font-family:var(--mono);font-size:1rem;margin-bottom:12px}
+.logincard .fail{color:var(--red);font-size:.8rem;margin-bottom:10px;display:none}
+.logincard .fail.show{display:block}
+.logincard .note{font-size:.75rem;color:var(--soft);margin-top:16px}
+
+/* ---------- home ---------- */
+.homewrap{max-width:900px;margin:40px auto;padding:0 16px}
+.homewrap h1{font-size:1.4rem;font-weight:800;margin-bottom:4px}
+.homewrap .sub{color:var(--soft);font-size:.88rem;margin-bottom:24px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.card{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:22px 20px;
+  text-align:left;cursor:pointer;transition:transform .12s, box-shadow .12s;border-bottom:4px solid transparent}
+.card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.08);border-bottom-color:var(--red)}
+.card .ic{font-size:1.6rem}
+.card h3{margin:10px 0 4px;font-size:1.02rem;font-weight:800}
+.card p{font-size:.78rem;color:var(--soft);line-height:1.45}
+.card.dataset{background:var(--black);color:#fff;border-color:var(--black)}
+.card.dataset p{color:#bbb}
+
+/* ---------- wizard ---------- */
+.wizwrap{max-width:960px;margin:26px auto 70px;padding:0 16px}
+.wizhead{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+.wizhead h1{font-size:1.3rem;font-weight:800}
+.wizhead .typechip{background:var(--red);color:#fff;font-size:.7rem;font-weight:800;
+  letter-spacing:.1em;text-transform:uppercase;border-radius:20px;padding:4px 12px}
+.steps{display:flex;gap:8px;margin-left:auto}
+.stepdot{display:flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;color:var(--soft)}
+.stepdot .n{width:22px;height:22px;border-radius:50%;background:var(--line);display:grid;place-items:center;font-size:.72rem}
+.stepdot.on{color:var(--black)}
+.stepdot.on .n{background:var(--red);color:#fff}
+.wizcard{background:var(--white);border:1px solid var(--line);border-radius:14px;
+  padding:24px 26px 28px;border-top:5px solid var(--red)}
+.wizcard .lede{color:var(--soft);font-size:.85rem;margin-bottom:18px}
+.wizactions{display:flex;justify-content:space-between;gap:10px;margin-top:22px}
+.wizactions .right{display:flex;gap:10px;margin-left:auto}
+
+.lookupbar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:6px}
+.lookupbar .field{flex:1;min-width:220px}
+.lookupmsg{font-size:.82rem;margin:8px 0 14px;display:none}
+.lookupmsg.show{display:block}
+.lookupmsg.found{color:var(--green);font-weight:700}
+.lookupmsg.miss{color:var(--amber);font-weight:700}
+
+.uploadbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  background:var(--black);border-radius:12px;padding:13px 16px;margin:18px 0 4px;color:#fff}
+.uploadbar .txt{font-size:.8rem;color:#c9c9c9;flex:1;min-width:200px}
+.uploadbar .txt b{color:#fff}
+.parsestatus{display:none;border:1px dashed var(--line);background:#fff;border-radius:10px;
+  padding:11px 14px;margin-top:10px;font-size:.83rem}
+.parsestatus.show{display:block}
+.parsestatus .found{color:var(--green);font-weight:700}
+.parsestatus .missed{color:var(--soft)}
+.autofill-key{display:inline-block;background:var(--amber-bg);color:var(--amber);
+  border-radius:4px;padding:0 6px;font-size:.74rem;font-weight:700;margin:2px 3px 0 0}
+
+.gstcheck{grid-column:1/-1;font-size:.8rem;border-radius:8px;padding:9px 12px;display:none}
+.gstcheck.ok{display:block;background:var(--green-bg);color:var(--green);font-weight:700}
+.gstcheck.warn{display:block;background:var(--amber-bg);color:var(--amber);font-weight:700}
+
+.formgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:13px 15px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--soft);font-weight:700}
+.field label .req{color:var(--red)}
+.field input,.field select{padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:#fff}
+.field.invalid input,.field.invalid select{border-color:var(--red)}
+.field .err{font-size:.7rem;color:var(--red);display:none}
+.field.invalid .err{display:block}
+.field.autofilled input,.field.autofilled select{background:var(--amber-bg);border-color:#e5cf8f}
+.mobilewrap{display:flex;align-items:stretch}
+.mobilewrap .prefix{background:#f0f0f0;border:1px solid var(--line);border-right:none;
+  border-radius:7px 0 0 7px;padding:8px 9px;font-size:.85rem;color:var(--soft);font-family:var(--mono)}
+.mobilewrap input{flex:1;border-radius:0 7px 7px 0}
+fieldset{border:none;border-top:1px solid var(--line);margin-top:16px;padding-top:12px;grid-column:1/-1}
+fieldset legend{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;font-weight:800;
+  color:var(--red);padding-right:10px}
+.calc-note{color:var(--soft);font-weight:400;text-transform:none;letter-spacing:0}
+.savedmsg{display:none;background:var(--green-bg);color:var(--green);border-radius:9px;
+  padding:12px 16px;font-weight:700;margin-bottom:16px}
+.savedmsg.show{display:block}
+
+/* ---------- reports ---------- */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px;padding:18px 20px 6px}
+.stat{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
+.stat .label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--soft)}
+.stat .value{font-family:var(--mono);font-weight:600;font-size:1.2rem;margin-top:4px}
+.stat.alert{border-color:#f0bfc4;background:var(--red-bg)}
+.stat.alert .value{color:var(--red)}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:12px 20px}
+.toolbar input[type=search]{flex:1 1 220px;min-width:180px;padding:8px 12px;
+  border:1px solid var(--line);border-radius:8px;background:var(--white)}
+.toolbar select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--white)}
+.toolbar .grow{flex:1}
+.tablewrap{margin:0 20px 12px;background:var(--white);border:1px solid var(--line);
+  border-radius:var(--radius);overflow:auto;max-height:calc(100vh - 330px)}
+table{border-collapse:collapse;width:max-content;min-width:100%;font-size:.85rem}
+thead th{position:sticky;top:0;background:#111;color:#fff;padding:9px 10px;text-align:left;
+  font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;z-index:5}
+tbody td{border-bottom:1px solid #eee;padding:8px 10px;white-space:nowrap;vertical-align:middle}
+tbody tr:hover{background:#faf5f5}
+tbody tr.selected{background:var(--red-bg)}
+td.num,th.num{text-align:right;font-family:var(--mono);font-size:.82rem}
+.plate{font-family:var(--mono);font-weight:600;font-size:.78rem;background:#fff;
+  border:1.5px solid var(--black);border-radius:5px;padding:2px 7px;display:inline-block;letter-spacing:.04em}
+.pill{display:inline-block;font-size:.72rem;font-weight:700;border-radius:20px;padding:2px 9px}
+.pill.ok{background:var(--green-bg);color:var(--green)}
+.pill.soon{background:var(--amber-bg);color:var(--amber)}
+.pill.expired{background:var(--red-bg);color:var(--red)}
+.rowact{display:flex;gap:6px}
+.rowact button{border:none;background:none;font-size:.8rem;font-weight:700;color:var(--soft);padding:3px 5px;border-radius:5px}
+.rowact button:hover{background:#eee;color:var(--black)}
+.rowact button.del:hover{background:var(--red-bg);color:var(--red)}
+.empty{padding:60px 20px;text-align:center;color:var(--soft)}
+.empty h3{font-weight:800;margin-bottom:6px;color:var(--black)}
+.selbar{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:45;
+  background:var(--black);color:#fff;border-radius:12px;padding:10px 16px;
+  display:none;align-items:center;gap:16px;box-shadow:0 8px 24px rgba(0,0,0,.35);font-size:.86rem}
+.selbar.show{display:flex}
+.selbar .sums{font-family:var(--mono);font-size:.8rem;display:flex;gap:14px;flex-wrap:wrap}
+.selbar .sums b{color:#ff8d9b}
+.drawer{position:fixed;top:0;right:-380px;width:360px;max-width:92vw;height:100vh;background:var(--white);
+  border-left:1px solid var(--line);z-index:60;transition:right .25s;display:flex;flex-direction:column;
+  box-shadow:-10px 0 30px rgba(0,0,0,.15)}
+.drawer.open{right:0}
+.drawer.left{right:auto;left:-380px;transition:left .25s;border-left:none;border-right:1px solid var(--line);
+  box-shadow:10px 0 30px rgba(0,0,0,.15)}
+.drawer.left.open{left:0}
+.facet{border-bottom:1px solid var(--line);padding-bottom:10px}
+.facet h3{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--soft);
+  margin-bottom:7px;display:flex;justify-content:space-between;align-items:center}
+.facet h3 .fclear{border:none;background:none;color:var(--red);font-size:.7rem;font-weight:700;cursor:pointer;display:none}
+.facet.hasActive h3 .fclear{display:inline}
+.facet .opts{display:flex;flex-direction:column;gap:4px;max-height:172px;overflow:auto}
+.facet label{display:flex;align-items:center;gap:8px;font-size:.84rem;cursor:pointer;
+  padding:3px 6px;border-radius:6px}
+.facet label:hover{background:#f4f4f4}
+.facet label .cnt{margin-left:auto;font-family:var(--mono);font-size:.72rem;color:var(--soft)}
+.facet input[type=checkbox]{accent-color:var(--red)}
+.actionslist .btn{width:100%;justify-content:flex-start;padding:11px 14px;font-size:.9rem}
+/* ---- folder-style view tabs ---- */
+.dstabs{display:flex;gap:6px;align-items:flex-end;padding:18px 20px 0;
+  background:var(--paper);border-bottom:1px solid var(--line)}
+.dstab{position:relative;overflow:hidden;background:#ececec;color:var(--soft);
+  border:1px solid var(--line);border-bottom:1px solid var(--line);border-radius:11px 11px 0 0;
+  padding:10px 20px;margin-bottom:-1px;font-weight:800;font-size:.9rem;cursor:pointer;
+  transition:background .15s,color .15s}
+.dstab:hover{background:#f5f5f5;color:var(--black)}
+.dstab.active{background:var(--white);color:var(--black);border-bottom-color:var(--white);
+  padding-top:12px;box-shadow:0 -4px 10px rgba(0,0,0,.05)}
+.dstab.active::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:var(--red)}
+.dstab .badge{vertical-align:1px;margin-left:6px}
+/* white folder sheet under the tabs */
+#pageReports{background:var(--white);min-height:calc(100vh - 54px);padding-bottom:1px}
+
+/* ---- brokers view ---- */
+.brokerwrap{display:flex;gap:26px;padding:24px 26px 60px;flex-wrap:wrap}
+.brokermain{flex:1;min-width:340px}
+.bsec{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;font-weight:800;
+  color:var(--black);margin:22px 0 10px}
+.pbar{height:14px;background:#eee;border-radius:10px;overflow:hidden;max-width:560px}
+.pfill{height:100%;background:var(--green);width:0%;border-radius:10px;transition:width .4s}
+.pmeta{display:flex;justify-content:space-between;max-width:560px;margin-top:6px;
+  font-size:.82rem;color:var(--soft)}
+.pmeta b{font-family:var(--mono);color:var(--black)}
+.pendrow{display:flex;align-items:center;gap:16px;margin-top:14px}
+.pendamt{font-weight:800;font-size:1.02rem;color:var(--red)}
+.pendamt.ok{color:var(--green)}
+.btab{border-collapse:collapse;margin-top:16px;min-width:480px}
+.btab th{background:#111;color:#fff;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;
+  padding:8px 14px;text-align:left}
+.btab td{border-bottom:1px solid #eee;padding:8px 14px;font-size:.88rem}
+.btab .num{text-align:right;font-family:var(--mono)}
+.bnote{font-size:.75rem;color:var(--soft);margin-top:8px}
+.payform{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;background:#fafafa;
+  border:1px solid var(--line);border-radius:10px;padding:14px}
+.payform .field input,.payform .field select{min-width:130px}
+.brokercard{width:300px;background:#fafafa;border:1px solid var(--line);border-radius:14px;
+  padding:18px 20px;align-self:flex-start;border-top:5px solid var(--red)}
+.brokercard h3{font-size:1rem;margin-bottom:12px}
+.brokercard .field{margin-bottom:10px}
+.brokercard .bval{font-weight:700;padding:4px 0}
+.brokercard h3{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.brokercard .bdedit{padding:4px 10px;font-size:.76rem}
+.brokercard input{display:none}
+.brokercard .bdactions{display:none;gap:8px;margin-top:12px;justify-content:flex-end}
+.brokercard.editing input{display:block}
+.brokercard.editing .bval.ed{display:none}
+.brokercard.editing .bdactions{display:flex}
+.brokercard.editing .bdedit{display:none}
+.bplist{margin-top:14px;font-size:.8rem;color:var(--soft)}
+.bplist div{padding:4px 0;border-bottom:1px dashed #eee;font-family:var(--mono)}
+.tablefoot{display:flex;align-items:center;justify-content:space-between;gap:14px;
+  margin:0 20px 90px;padding:2px;flex-wrap:wrap}
+.pager{display:flex;align-items:center;gap:10px}
+.pginfo{font-size:.82rem;color:var(--soft);font-family:var(--mono)}
+.savebar{display:none;align-items:center;gap:10px;background:var(--amber-bg);
+  border:1px solid #e5cf8f;border-radius:10px;padding:8px 12px;font-size:.85rem;font-weight:700;color:var(--amber)}
+.savebar.show{display:flex}
+select.recvsel{padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:.8rem;background:#fff}
+select.recvsel.staged, .paytoggle.staged{outline:2px solid var(--amber)}
+.paytoggle{accent-color:var(--green);width:16px;height:16px;cursor:pointer}
+td.paycell{text-align:center}
+.pill.unpaid{background:var(--red-bg);color:var(--red)}
+.cartab{width:100%;border-collapse:collapse}
+.cartab td{padding:6px 8px;border-bottom:1px solid #f0f0f0;white-space:normal}
+.cartab td:first-child{color:var(--soft);font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;width:44%}
+.rowact button.fetch:hover{background:var(--green-bg);color:var(--green)}
+.drawer header{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.drawer header h2{font-size:1rem}
+.drawer .list{overflow:auto;padding:12px 18px;flex:1;display:flex;flex-direction:column;gap:10px}
+.rem{border:1px solid var(--line);border-left:4px solid var(--amber);border-radius:8px;padding:10px 12px}
+.rem.expired{border-left-color:var(--red)}
+.rem .who{font-weight:800}
+.rem .meta{font-size:.78rem;color:var(--soft);margin-top:3px}
+.rem .when{font-family:var(--mono);font-size:.78rem;margin-top:5px}
+.badge{background:var(--red);color:#fff;border-radius:10px;font-size:.68rem;padding:1px 7px;font-weight:800;margin-left:4px}
+
+/* ---------- modal / toast ---------- */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:70;display:none;
+  align-items:flex-start;justify-content:center;padding:4vh 14px;overflow:auto}
+.overlay.open{display:flex}
+.modal{background:var(--white);border-radius:14px;width:880px;max-width:100%;padding:22px 24px 26px}
+.modal h2{font-size:1.15rem;margin-bottom:4px}
+.modal .hint{font-size:.8rem;color:var(--soft);margin-bottom:16px}
+.modal .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+.modal.small{width:540px}
+.modal code{background:#f0f0f0;border-radius:4px;padding:1px 5px;font-size:.8rem}
+.toast.success{background:var(--green)}
+.btab input,.btab select{padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:.82rem;max-width:120px}
+.toast{position:fixed;bottom:18px;right:18px;background:var(--black);color:#fff;border-radius:9px;
+  padding:10px 16px;font-size:.85rem;z-index:90;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none}
+.toast.show{opacity:1;transform:none}
+
+@media (max-width:700px){
+  .topbar{flex-wrap:wrap;padding:8px 12px;gap:8px}
+  .tablewrap{margin:0 10px 110px;max-height:none}
+  .stats,.toolbar{padding-left:10px;padding-right:10px}
+  .wizcard{padding:18px 14px}
+  .steps{margin-left:0;width:100%}
+}
+@media (prefers-reduced-motion:reduce){ *{transition:none !important} }
+</style>
+</head>
+<body>
+
+<div class="topbar" id="topbar" style="display:none">
+  <div class="brand" id="brandHome" title="Home">
+    <div class="logo">CARS<em>99</em></div>
+    <div class="sub">Insurance CRM</div>
+  </div>
+  <span class="rolechip" id="roleChip">Staff</span>
+  <div class="spacer"></div>
+  <div class="conn demo" id="connState"><span class="dot"></span><span id="connLabel">Demo mode</span></div>
+  <button class="btn ghost-dark" id="btnHome">Home</button>
+  <button class="btn ghost-dark" id="btnSettings">Settings</button>
+  <button class="btn ghost-dark" id="btnLogout">Logout</button>
+</div>
+
+<!-- ============ 1. LOGIN ============ -->
+<div class="page active" id="pageLogin">
+  <div class="loginwrap">
+    <div class="logincard">
+      <div class="biglogo">CARS<em>99</em></div>
+      <div class="tag">Insurance CRM · <span id="verLogin"></span></div>
+      <input type="password" id="loginPass" placeholder="Enter your passcode" autocomplete="current-password">
+      <div class="fail" id="loginFail">Wrong passcode. Try again.</div>
+      <button class="btn primary big" id="btnLogin" style="width:100%;justify-content:center">Login</button>
+      <div class="note">Staff passcode → feed policies · Admin passcode → also see the dataset</div>
+      <div class="note"><a href="#" id="loginSettings" style="color:var(--soft)">Connection settings</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 2. HOME ============ -->
+<div class="page" id="pageHome">
+  <div class="homewrap">
+    <h1 id="homeHello">What are we recording today?</h1>
+    <p class="sub">Pick a policy type to start.</p>
+    <div class="cards">
+      <button class="card" data-type="Fresh">
+        <div class="ic">🆕</div><h3>Fresh Policy</h3>
+        <p>Brand-new customer or vehicle. Quick capture, upload the PDF, then detail entry.</p>
+      </button>
+      <button class="card" data-type="Renewal">
+        <div class="ic">🔁</div><h3>Renewal Policy</h3>
+        <p>Enter the car number — previous details fill themselves from the register.</p>
+      </button>
+      <button class="card" data-type="For Record">
+        <div class="ic">🗂️</div><h3>For Record</h3>
+        <p>Policy done elsewhere — log it so renewals and history stay complete.</p>
+      </button>
+      <button class="card dataset" id="cardDataset" style="display:none">
+        <div class="ic">📊</div><h3>See Dataset</h3>
+        <p>Full register: totals, filters, renewals, edit &amp; export. Admin only.</p>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 3. WIZARD ============ -->
+<div class="page" id="pageWizard">
+  <div class="wizwrap">
+    <div class="savedmsg" id="savedMsg"></div>
+    <div class="wizhead">
+      <h1>New policy</h1>
+      <span class="typechip" id="wizType">Fresh</span>
+      <div class="steps">
+        <span class="stepdot on" id="dot1"><span class="n">1</span> Customer &amp; car</span>
+        <span class="stepdot" id="dot2"><span class="n">2</span> Policy details</span>
+      </div>
+    </div>
+
+    <div class="wizcard">
+      <!-- step 1 -->
+      <div id="step1">
+        <div id="renewalLookup" style="display:none">
+          <div class="lookupbar">
+            <div class="field">
+              <label for="lookupReg">Car Reg No.</label>
+              <input id="lookupReg" placeholder="DL-12-AB-3456" style="text-transform:uppercase">
+            </div>
+            <button class="btn primary" id="btnLookup">Fetch previous details</button>
+          </div>
+          <div class="lookupmsg" id="lookupMsg"></div>
+        </div>
+
+        <p class="lede" id="step1Lede">Quick capture — the essentials first.</p>
+        <div class="formgrid" id="grid1"></div>
+
+        <div class="uploadbar">
+          <div class="txt"><b>Policy upload box</b> — upload the policy PDF and the details page fills itself with whatever it can read.</div>
+          <input type="file" id="pdfInput" accept="application/pdf" hidden>
+          <button type="button" class="btn primary" id="btnUpload">⬆ Upload Policy</button>
+        </div>
+        <div class="parsestatus" id="parseStatus"></div>
+
+        <div class="wizactions">
+          <button class="btn" id="btnWizCancel1">Cancel</button>
+          <div class="right">
+            <button class="btn primary big" id="btnToStep2">Next: policy details →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- step 2 -->
+      <div id="step2" style="display:none">
+        <p class="lede">Detail policy info. Amounts marked ƒ auto-calculate — overwrite if needed.</p>
+        <div class="formgrid" id="grid2"></div>
+        <div class="wizactions">
+          <button class="btn" id="btnBackStep1">← Back</button>
+          <div class="right">
+            <button class="btn" id="btnWizCancel2">Cancel</button>
+            <button class="btn primary big" id="btnWizSave">Save policy</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 4. SEE DATASET ============ -->
+<div class="page" id="pageReports">
+  <div class="dstabs">
+    <button class="dstab active" data-tab="all">🗂️ All Policies</button>
+    <button class="dstab" data-tab="pay">💳 Payment: CARS99 <span class="badge" id="dueBadge" style="display:none">0</span></button>
+    <button class="dstab" data-tab="sp">🤝 Sale/Purchase: Yes <span class="badge" id="rcBadge" style="display:none">0</span></button>
+    <button class="dstab" data-tab="brokers">🤵 Brokers</button>
+  </div>
+
+  <div id="policyView">
+  <div class="stats" id="stats"></div>
+  <div class="toolbar">
+    <input type="search" id="q" placeholder="Search anything — name, number, insurer, broker, amount…">
+    <button class="btn" id="btnFilters">☰ Filters <span class="badge" id="filterBadge" style="display:none">0</span></button>
+    <div class="grow"></div>
+    <button class="btn" id="btnColumns">▦ Columns</button>
+    <button class="btn" id="btnActions">⚙ Actions <span class="badge" id="remBadgeTop" style="display:none">0</span></button>
+  </div>
+  <div class="tablewrap">
+    <table id="tbl">
+      <thead><tr id="theadRow"></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="empty" id="emptyState" style="display:none">
+      <h3>No policies found</h3>
+      <p>Feed policies from the Home page, or adjust your filters.</p>
+    </div>
+  </div>
+  <div class="tablefoot">
+    <div class="pager">
+      <button class="btn" id="pgPrev">← Prev</button>
+      <span class="pginfo" id="pgInfo">Page 1 of 1</span>
+      <button class="btn" id="pgNext">Next →</button>
+    </div>
+    <div class="savebar" id="saveBar">
+      <span id="saveCount">0 unsaved changes</span>
+      <button class="btn" id="btnDiscardEdits">Discard</button>
+      <button class="btn primary" id="btnSaveEdits">💾 Save changes</button>
+    </div>
+  </div>
+  </div><!-- /policyView -->
+
+  <!-- ============ BROKERS VIEW ============ -->
+  <div id="brokerView" style="display:none">
+    <div class="brokerwrap">
+      <div class="brokermain">
+        <div class="field" style="max-width:340px">
+          <label for="brokerSel">Select broker</label>
+          <select id="brokerSel"><option value="">— choose a broker —</option></select>
+        </div>
+
+        <div id="brokerEmpty" class="empty" style="padding:40px 10px">
+          <h3>Pick a broker</h3>
+          <p>Receivables come from Fresh &amp; Renewal policy payouts. For Record policies are excluded.</p>
+        </div>
+
+        <div id="brokerStats" style="display:none">
+          <h3 class="bsec">Total Amount Receivable</h3>
+          <div class="pbar"><div class="pfill" id="pFill"></div></div>
+          <div class="pmeta">
+            <span>Total rcvd. <b id="pRecv">₹0</b></span>
+            <span id="pMid"></span>
+            <span>Total recvbl. <b id="pTotal">₹0</b></span>
+          </div>
+          <div class="pendrow">
+            <span class="pendamt" id="pPending">Pending Amount: ₹0</span>
+            <button class="btn" id="btnGetDetails">Get Details</button>
+          </div>
+
+          <div id="brokerMonths" style="display:none">
+            <table class="btab">
+              <thead><tr><th>Insurance Month</th><th>Payment month</th><th class="num">Receivable</th><th class="num">Received</th></tr></thead>
+              <tbody id="brokerMonthBody"></tbody>
+            </table>
+            <p class="bnote">A bill month covers the previous insurance month's payouts. Months with a zero running balance are hidden; once the overall due is zero, everything clears.</p>
+          </div>
+
+          <h3 class="bsec" style="margin-top:26px">Record New Amount</h3>
+          <div class="payform">
+            <div class="field"><label>Date</label><input type="date" id="bpDate"></div>
+            <div class="field"><label>Mode</label><select id="bpMode"></select></div>
+            <div class="field"><label>Amount</label><input type="number" id="bpAmount" step="0.01" min="0" placeholder="0.00"></div>
+            <div class="field" style="flex:1"><label>Remarks</label><input id="bpRemarks" placeholder="optional"></div>
+            <button class="btn primary" id="btnBpSave">Save</button>
+          </div>
+
+          <div id="bpRecords" style="display:none">
+            <h3 class="bsec" style="margin-top:22px">Payments — months in context</h3>
+            <table class="btab" style="min-width:560px">
+              <thead><tr><th>Payment month</th><th>Date</th><th>Mode</th><th class="num">Amount</th><th>Remarks</th><th></th></tr></thead>
+              <tbody id="bpTableBody"></tbody>
+            </table>
+            <div class="pager" style="margin-top:10px">
+              <button class="btn" id="bpPrev">← Prev</button>
+              <span class="pginfo" id="bpInfo">Page 1 of 1</span>
+              <button class="btn" id="bpNext">Next →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="brokercard" id="brokerCard" style="display:none">
+        <h3>Broker details <button class="btn bdedit" id="btnBdEdit" title="Edit contact details">✎ Edit</button></h3>
+        <div class="field"><label>Name</label><div class="bval" id="bdName">—</div></div>
+        <div class="field"><label>Contact number</label>
+          <div class="bval ed" id="bdContactV">—</div><input id="bdContact" placeholder="mobile number"></div>
+        <div class="field"><label>Email</label>
+          <div class="bval ed" id="bdEmailV">—</div><input id="bdEmail" placeholder="email address"></div>
+        <div class="field"><label>Cars99 Tenure</label>
+          <div class="bval ed" id="bdTenureV">—</div><input id="bdTenure" placeholder="e.g. 5Yr"></div>
+        <div class="field"><label>Policies Count</label><div class="bval" id="bdCount">0</div></div>
+        <div class="field"><label>Total Business Amount</label><div class="bval" id="bdBusiness">₹0</div></div>
+        <div class="bdactions" id="bdActions">
+          <button class="btn" id="btnBdCancel">Cancel</button>
+          <button class="btn primary" id="btnBdSave">Save</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<div class="selbar" id="selbar">
+  <span id="selCount">0 selected</span>
+  <div class="sums" id="selSums"></div>
+  <button class="btn" id="btnClearSel">Clear</button>
+  <button class="btn danger" id="btnDeleteSel">Delete</button>
+</div>
+
+<aside class="drawer" id="drawer" aria-label="Renewal reminders">
+  <header>
+    <h2>Renewal reminders</h2>
+    <div style="display:flex;gap:8px">
+      <button class="btn" id="btnNotify">Enable alerts</button>
+      <button class="btn" id="btnCloseDrawer">Close</button>
+    </div>
+  </header>
+  <div class="list" id="remList"></div>
+</aside>
+
+<!-- global facet filters (e-commerce style) -->
+<aside class="drawer left" id="filterDrawer" aria-label="Filters">
+  <header>
+    <h2>Filters</h2>
+    <div style="display:flex;gap:8px">
+      <button class="btn" id="btnClearFacets">Clear all</button>
+      <button class="btn" id="btnCloseFilters">Close</button>
+    </div>
+  </header>
+  <div class="list" id="facetList"></div>
+</aside>
+
+<!-- column chooser -->
+<aside class="drawer" id="columnsDrawer" aria-label="Columns">
+  <header>
+    <h2>Columns</h2>
+    <div style="display:flex;gap:8px">
+      <button class="btn" id="btnColsAll">All</button>
+      <button class="btn" id="btnCloseColumns">Close</button>
+    </div>
+  </header>
+  <div class="list" id="colsList"></div>
+</aside>
+
+<!-- consolidated actions (filter-style, right side) -->
+<aside class="drawer" id="actionsDrawer" aria-label="Actions">
+  <header>
+    <h2>Actions</h2>
+    <button class="btn" id="btnCloseActions">Close</button>
+  </header>
+  <div class="list actionslist">
+    <button class="btn" id="btnReminders">🔔 Renewal reminders <span class="badge" id="remBadge" style="display:none">0</span></button>
+    <button class="btn" id="btnSyncDrive" title="Pull policy PDFs dropped in the Drive folder">⟳ Sync from Google Drive</button>
+    <button class="btn" id="btnSyncWA" title="Read policies from the WhatsApp group">⟳ Sync from WhatsApp</button>
+    <button class="btn" id="btnExport">⬇ Export CSV (filtered view)</button>
+    <button class="btn" id="btnRefresh">↻ Refresh data</button>
+  </div>
+</aside>
+
+<!-- edit modal (dataset only) -->
+<div class="overlay" id="editOverlay">
+  <div class="modal">
+    <h2>Edit policy</h2>
+    <p class="hint">Amounts marked ƒ auto-calculate — overwrite if needed.</p>
+    <form id="editForm" novalidate>
+      <div class="formgrid" id="editGrid"></div>
+      <div class="actions">
+        <button type="button" class="btn" id="btnCancelEdit">Cancel</button>
+        <button type="button" class="btn primary" id="btnSaveEdit">Save changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- car details (admin fetch) -->
+<div class="overlay" id="carOverlay">
+  <div class="modal small">
+    <h2>Car details <span style="font-family:var(--mono);font-size:.85rem" id="carReg"></span></h2>
+    <p class="hint" id="carHint"></p>
+    <div id="carBody" style="font-size:.88rem"></div>
+    <div class="actions">
+      <button class="btn" id="btnCloseCar">Close</button>
+      <button class="btn primary" id="btnApplyCar" style="display:none">Apply to row</button>
+    </div>
+  </div>
+</div>
+
+<!-- settings -->
+<div class="overlay" id="settingsOverlay">
+  <div class="modal small">
+    <h2>Connection settings</h2>
+    <p class="hint">Paste the Apps Script Web App URL from <code>Code.gs</code> deployment (see README). Passcodes are set inside Code.gs — the staff passcode can only add policies; the admin passcode also unlocks See Dataset. Leave the URL blank for demo mode (data stays in this browser; passcodes <code>staff</code> / <code>cars99</code>).</p>
+    <div class="field" style="margin-bottom:12px">
+      <label>Apps Script Web App URL</label>
+      <input id="setUrl" placeholder="https://script.google.com/macros/s/…/exec">
+    </div>
+    <div class="actions">
+      <button class="btn" id="btnCloseSettings">Cancel</button>
+      <button class="btn primary" id="btnSaveSettings">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================
+   CARS99 Insurance CRM — v3
+   Login → Home (Fresh / Renewal / Sale Purchase / For Record)
+   → 2-step wizard · Admin: See Dataset
+   ===================================================== */
+
+/* ---------- dropdown lists ---------- */
+function last4FY(){
+  const now = new Date();
+  const startYear = (now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear()-1);
+  const out = [];
+  for(let y = startYear; y > startYear-4; y--)
+    out.push(y + '-' + String((y+1)%100).padStart(2,'0'));
+  return out;
+}
+const DEFAULT_LISTS = {
+  fy: last4FY(),
+  vehicle: ['Private Car','Two Wheeler','Commercial Vehicle','Taxi','Three Wheeler'],
+  reference: ['Sandeep','Prashant','Nitin','Hari','Rohit','Rajat','Rajan','Deepanshu','Gagan','Karma',
+    'Keshav','Puneet','Sanjeev','Suresh','Harsh','Vicky','Pradeep','Bhatia','Kartik','Ankur','Ankit',
+    'Nitikesh','Nitan Khanna','Amit Verma',
+    'Ashu/Milan Motors','Ashu/Muskan Motors','Ashu/Chaudhary Motors','Ashu/Kalinder Motors','Ashu/Kaender Motors',
+    'Ashu/Delhi Car Bazaar','Ashu/Sai Car Bazar','Ashu/Universal Motors','Ashu/Sahara Motors','Ashu/ND Motors',
+    'Ashu/Diamond Motors','Super Motors','Milan Motors'],
+  paymentSource: ['CARS99','CUSTOMER'],
+  payMode: ['UPI','Cash','Card','Net Banking','Cheque'],
+  recvMode: ['UPI','Cash','Card','Net Banking','Cheque','Pending'],
+  broker: ['Royal Insurance Broking'],
+  insurer: ['Generali Central','ICICI Lombard','HDFC Ergo','Bajaj Allianz','Tata AIG','Go Digit','Acko',
+    'Reliance General','SBI General','New India Assurance','National Insurance','Oriental Insurance',
+    'United India','Cholamandalam MS','IFFCO Tokio','Royal Sundaram','Magma HDI','Liberty General',
+    'Shriram General','Universal Sompo','Zurich Kotak','Navi General'],
+};
+const custom = JSON.parse(localStorage.getItem('cars99.lists') || '{}');
+const listFor = key => {
+  const merged = [...DEFAULT_LISTS[key], ...(custom[key]||[]).filter(v=>!DEFAULT_LISTS[key].includes(v))];
+  // FY keeps newest-first order; every other list is alphabetical
+  return key === 'fy' ? merged
+    : merged.sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
+};
+function addToList(key, val){
+  if(key === 'reference') val = normalizeRef(val);
+  custom[key] = custom[key] || [];
+  const exists = [...DEFAULT_LISTS[key], ...custom[key]].some(v => v.toLowerCase() === val.toLowerCase());
+  if(!exists) custom[key].push(val);
+  localStorage.setItem('cars99.lists', JSON.stringify(custom));
+  return val;
+}
+/* Reference names: strip Sir/Ji honorifics, collapse spaces, Title Case
+   (short all-caps words like "ND" are kept as-is) */
+function normalizeRef(v){
+  return String(v||'').trim().replace(/\s+/g,' ')
+    .replace(/\s+(sir|ji|saab|sahab)\.?$/i,'')
+    .split('/').map(seg => seg.trim().split(' ').map(w =>
+      (w.length <= 2 && w === w.toUpperCase() && /[A-Z]/.test(w)) ? w
+      : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+    ).join(' ')).join('/');
+}
+
+/* ---------- column spec ---------- */
+/* t: text|date|money|pct|select|combo|mobile ; step: 1|2 ; grp for step-2 fieldsets */
+const COLS = [
+  {k:'Sr.No',                t:'text',  hideForm:true},
+  {k:'Source',               t:'text',  hideForm:true},                  // Fresh / Renewal / For Record
+  {k:'Sale Purchase',        t:'select', opts:['No','Yes'], step:1},     // shown for Fresh & For Record
+  {k:'RC Cleared',           t:'select', opts:['Yes','No'], step:1},     // RC transfer done? (sale-purchase deals)
+  {k:'FY',                   t:'select', list:'fy', step:2, calc:true},
+  {k:'Month',                t:'select', opts:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], step:2, calc:true},
+  {k:'Date of Insurance',    t:'date',   step:2, req:true},
+  {k:'Name',                 t:'text',   step:1, req:true, label:'Customer Name'},
+  {k:'Cust. Mobile Number',  t:'mobile', step:1, req:true, label:'Contact Number'},
+  {k:'Regd. Number',         t:'text',   step:1, req:true, ph:'DL-12-AB-3456', label:'Car Reg No.'},
+  {k:'Car Name & Model',     t:'text',   step:1, ph:'e.g. Maruti Swift VXi'},
+  {k:'Vechicle Type',        t:'combo',  list:'vehicle', step:2},
+  {k:'Insurance Period',     t:'text',   step:2, calc:true, ph:'auto from dates'},
+  {k:'Policy End Date',      t:'date',   step:2, calc:true},
+  {k:'Reference',            t:'combo',  list:'reference', step:1},
+  {k:'Insurance Amount',     t:'money',  step:2, req:true, grp:'money'},
+  {k:'Discount',             t:'money',  step:2, grp:'money'},
+  {k:'Net Customer Amount',  t:'money',  step:2, grp:'money', calc:true},
+  {k:'Payment Source',       t:'select', list:'paymentSource', step:1, label:'Payment'},
+  {k:'Mode of Payment',      t:'combo',  list:'payMode', step:2, grp:'money'},
+  {k:'Mode of Received',     t:'combo',  list:'recvMode', step:2, grp:'money'},
+  {k:'Payment Received',     t:'select', opts:['Yes','No'], step:2, grp:'money'},
+  {k:'Remarks',              t:'text',   step:2, grp:'broker'},
+  {k:'Policy No',            t:'text',   step:2, grp:'broker'},
+  {k:'Broker Sr.No',         t:'text',   hideForm:true},
+  {k:'Name of Insurance Co.',t:'combo',  list:'insurer', step:2, grp:'broker', label:'Insurance Company'},
+  {k:'Brokers Name',         t:'combo',  list:'broker', step:2, grp:'broker'},
+  {k:'OD Amount',            t:'money',  step:2, grp:'broker'},
+  {k:'Payout %',             t:'pct',    step:2, grp:'broker', ph:'15, 16, 17, 18, 20, 21…'},
+  {k:'3rd Party Amount',     t:'money',  step:2, grp:'broker'},
+  {k:'3rd Party (%)',        t:'pct',    hideForm:true},
+  {k:'Payout amount',        t:'money',  step:2, grp:'broker', calc:true},
+  {k:'Comm. %',              t:'pct',    step:2, grp:'broker', label:'Commission %'},
+  {k:'Comm. Paid',           t:'money',  step:2, grp:'broker', calc:true, label:'Commission Paid Amt'},
+  {k:'Net Cars99 Payout',    t:'money',  step:2, grp:'broker', calc:true},
+];
+const STEP1_KEYS = COLS.filter(c=>c.step===1).map(c=>c.k);
+const step1KeysFor = type => type === 'Renewal'
+  ? STEP1_KEYS.filter(k => k !== 'Sale Purchase' && k !== 'RC Cleared') : STEP1_KEYS;
+const STEP2_KEYS = COLS.filter(c=>c.step===2).map(c=>c.k);
+const MONEY_TOTALS = ['Insurance Amount','Net Customer Amount','Payout amount','Comm. Paid','Net Cars99 Payout'];
+const GROUPS = {'':'Policy & dates', money:'Money — customer side', broker:'Insurer & payout'};
+const col = k => COLS.find(c=>c.k===k);
+
+/* ---------- state / helpers ---------- */
+let state = {
+  role: sessionStorage.getItem('cars99.role') || null,   // 'staff' | 'admin'
+  tok:  sessionStorage.getItem('cars99.tok')  || null,
+  rows: [], selected: new Set(), editingId: null,
+  cfg: JSON.parse(localStorage.getItem('cars99.cfg') || '{}'),   // {url}
+  wizType: 'Fresh',
+};
+const DEMO_STAFF = 'staff', DEMO_ADMIN = 'cars99';
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const fmtINR = n => isNaN(n) || n === '' ? '' : Number(n).toLocaleString('en-IN',{maximumFractionDigits:2});
+const num = v => { const n = parseFloat(String(v).replace(/[₹,\s]/g,'')); return isNaN(n) ? 0 : n; };
+const isLive = () => !!(state.cfg.url);
+const normReg = s => String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+
+function parseDMY(s){
+  if(!s) return null; s = String(s).trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return new Date(+m[1], +m[2]-1, +m[3]);
+  m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  return m ? new Date(+m[3], +m[2]-1, +m[1]) : null;
+}
+const toDMY = d => d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}` : '';
+const toISO = s => { const d = parseDMY(s); return d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : ''; };
+
+function yearOf(r){
+  const d = parseDMY(r['Date of Insurance']);
+  if(d) return String(d.getFullYear());
+  const m = String(r.FY||'').match(/^(\d{4})/);
+  return m ? m[1] : '';
+}
+function policyStatus(r){
+  const end = parseDMY(r['Policy End Date']) || (()=>{ 
+    const m = String(r['Insurance Period']||'').match(/(\d{1,2}\/\d{1,2}\/\d{4})\s*$/);
+    return m ? parseDMY(m[1]) : null; })();
+  if(!end) return {s:'unknown', end:null, days:null};
+  const days = Math.ceil((end - new Date().setHours(0,0,0,0)) / 86400000);
+  if(days < 0)  return {s:'expired', end, days};
+  if(days <= 30) return {s:'soon', end, days};
+  return {s:'active', end, days};
+}
+
+/* ---------- API / demo store ---------- */
+async function apiGet(token){
+  const u = new URL(state.cfg.url);
+  u.searchParams.set('token', token);
+  const j = await (await fetch(u)).json();
+  if(!j.ok) throw new Error(j.error || 'API error');
+  return j.rows;
+}
+async function apiPost(payload, token){
+  payload.token = token;
+  const j = await (await fetch(state.cfg.url, {
+    method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(payload)})).json();
+  if(!j.ok) throw new Error(j.error || 'API error');
+  return j;
+}
+const demoLoad = () => JSON.parse(localStorage.getItem('cars99.demo') || '[]');
+const demoSave = rows => localStorage.setItem('cars99.demo', JSON.stringify(rows));
+
+function setConn(){
+  $('connState').className = 'conn ' + (isLive() ? 'live' : 'demo');
+  $('connLabel').textContent = isLive() ? 'Connected to Google Sheets' : 'Demo mode';
+}
+
+/* ---------- navigation ---------- */
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === id));
+  $('topbar').style.display = (id === 'pageLogin') ? 'none' : 'flex';
+  window.scrollTo(0,0);
+}
+$('brandHome').onclick = $('btnHome').onclick = () => { if(state.role) showPage('pageHome'); };
+
+/* ---------- login / logout ---------- */
+async function login(pass){
+  if(!pass) return;
+  $('loginFail').classList.remove('show');
+  $('btnLogin').disabled = true;
+  try{
+    let role;
+    if(isLive()){
+      role = (await apiPost({action:'ping'}, pass)).role;
+    }else{
+      if(pass === DEMO_ADMIN) role = 'admin';
+      else if(pass === DEMO_STAFF) role = 'staff';
+      else throw new Error('Wrong passcode');
+    }
+    state.role = role; state.tok = pass;
+    sessionStorage.setItem('cars99.role', role);
+    sessionStorage.setItem('cars99.tok', pass);
+    enterApp();
+  }catch(err){
+    $('loginFail').textContent = isLive() ? ('Login failed: ' + err.message) : 'Wrong passcode. Try again.';
+    $('loginFail').classList.add('show');
+  }
+  $('btnLogin').disabled = false;
+}
+function enterApp(){
+  $('roleChip').textContent = state.role === 'admin' ? 'Admin' : 'Staff';
+  $('roleChip').className = 'rolechip' + (state.role === 'admin' ? ' admin' : '');
+  $('cardDataset').style.display = state.role === 'admin' ? 'block' : 'none';
+  $('loginPass').value = '';
+  showPage('pageHome');
+}
+$('btnLogin').onclick = () => login($('loginPass').value.trim());
+$('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') $('btnLogin').click(); });
+$('btnLogout').onclick = () => {
+  state.role = state.tok = null; state.rows = []; state.selected.clear();
+  sessionStorage.removeItem('cars99.role'); sessionStorage.removeItem('cars99.tok');
+  showPage('pageLogin');
+};
+$('loginSettings').onclick = e => { e.preventDefault(); openSettings(); };
+
+/* ---------- home cards ---------- */
+document.querySelectorAll('.card[data-type]').forEach(c =>
+  c.addEventListener('click', () => startWizard(c.dataset.type)));
+$('cardDataset').onclick = async () => {
+  if(state.dsTab === 'brokers'){
+    $('policyView').style.display = 'none';
+    $('brokerView').style.display = 'block';
+    document.querySelectorAll('.dstab').forEach(b => b.classList.toggle('active', b.dataset.tab === 'brokers'));
+  }else{
+    loadTab(state.dsTab);
+  }
+  showPage('pageReports');
+  await reload();
+  if(state.dsTab === 'brokers') initBrokerView();
+};
+
+/* =====================================================
+   WIZARD — shared field builder + the new payout math
+   ===================================================== */
+function buildFields(gridEl, keys, rec, prefix, withGroups){
+  let html = '', lastGrp = null;
+  keys.forEach((k,i) => {
+    const c = col(k);
+    const grp = c.grp || '';
+    if(withGroups && grp !== lastGrp){
+      if(grp) html += `<fieldset><legend>${GROUPS[grp]}</legend></fieldset>`;
+      lastGrp = grp;
+    }
+    const val = rec[k] ?? '';
+    const id = prefix + i;
+    const label = `<label for="${id}">${esc(c.label||c.k)}${c.req?' <span class="req">*</span>':''}${c.calc?' <span class="calc-note">ƒ</span>':''}</label>`;
+    if(c.t==='select' || c.t==='combo'){
+      const opts = c.opts || listFor(c.list);
+      html += `<div class="field">${label}<select id="${id}" data-k="${esc(k)}" ${c.req?'required':''}>
+        <option value=""></option>
+        ${opts.map(o=>`<option ${o===val?'selected':''}>${esc(o)}</option>`).join('')}
+        ${(val && !opts.includes(val)) ? `<option selected>${esc(val)}</option>` : ''}
+        ${c.t==='combo' ? '<option value="__add__">＋ Add new…</option>' : ''}
+      </select></div>`;
+    }else if(c.t==='date'){
+      html += `<div class="field">${label}<input type="date" id="${id}" data-k="${esc(k)}" value="${toISO(val)}" ${c.req?'required':''}></div>`;
+    }else if(c.t==='mobile'){
+      html += `<div class="field">${label}
+        <div class="mobilewrap"><span class="prefix">+91</span>
+        <input type="tel" id="${id}" data-k="${esc(k)}" value="${esc(val)}" inputmode="numeric"
+          maxlength="10" pattern="[6-9][0-9]{9}" placeholder="10-digit mobile" ${c.req?'required':''}></div>
+        <span class="err">Enter a valid 10-digit Indian mobile (starts 6–9)</span></div>`;
+    }else{
+      const type = (c.t==='money'||c.t==='pct') ? 'number' : 'text';
+      // calculated fields (Net Cars99 Payout etc.) may legitimately go negative —
+      // e.g. discount larger than payout — so no min constraint on them
+      html += `<div class="field">${label}<input type="${type}" ${type==='number' ? ('step="0.01"' + (c.calc ? '' : ' min="0"')) : ''}
+        id="${id}" data-k="${esc(k)}" value="${esc(val)}" placeholder="${c.ph||''}" ${c.req?'required':''}></div>`;
+    }
+    if(k === '3rd Party Amount')
+      html += `<div class="gstcheck" id="${prefix}gst"></div>`;
+  });
+  gridEl.innerHTML = html;
+
+  // combo "+ Add new…"
+  gridEl.querySelectorAll('select').forEach(sel => {
+    sel.addEventListener('change', () => {
+      if(sel.value !== '__add__') return;
+      const c = col(sel.dataset.k);
+      const v = prompt('Add new option for “' + (c.label||c.k) + '”:');
+      if(v && v.trim()){
+        const clean = addToList(c.list, v.trim());
+        // rebuild options so the new one lands in alphabetical position
+        sel.innerHTML = '<option value=""></option>' +
+          listFor(c.list).map(o=>`<option ${o===clean?'selected':''}>${esc(o)}</option>`).join('') +
+          '<option value="__add__">＋ Add new…</option>';
+      } else sel.value = '';
+    });
+  });
+
+  // auto-calculations (notes from 15/07 meeting)
+  const q = k => gridEl.querySelector(`[data-k="${CSS.escape(k)}"]`);
+  const get = k => { const el = q(k); return el ? el.value : ''; };
+  const set = (k,v) => { const el = q(k); if(el) el.value = v; };
+  const recalc = () => {
+    const ins = num(get('Insurance Amount')), disc = num(get('Discount'));
+    if(get('Insurance Amount')!=='') set('Net Customer Amount', (ins - disc).toFixed(2));
+
+    // payout % applies on OD if OD > 0, otherwise on 3rd Party
+    const od = num(get('OD Amount')), tp = num(get('3rd Party Amount')), pct = num(get('Payout %'));
+    if(pct && (od > 0 || tp > 0))
+      set('Payout amount', ((od > 0 ? od : tp) * pct / 100).toFixed(2));
+
+    const commPct = num(get('Comm. %'));
+    if(commPct) set('Comm. Paid', (num(get('Payout amount')) * commPct / 100).toFixed(2));
+
+    // Net Cars99 Payout = Payout Amt − Discount Amt − Commission Paid Amt
+    if(q('Net Cars99 Payout'))
+      set('Net Cars99 Payout', (num(get('Payout amount')) - disc - num(get('Comm. Paid'))).toFixed(2));
+
+    // GST cross-check: (OD + 3rd Party) + 18% GST should equal Total Insurance Amt
+    const gstEl = gridEl.querySelector('.gstcheck');
+    if(gstEl){
+      if((od || tp) && ins){
+        const expected = (od + tp) * 1.18;
+        const diff = ins - expected;
+        if(Math.abs(diff) <= 10){
+          gstEl.className = 'gstcheck ok';
+          gstEl.textContent = '✓ Check OK: (OD + 3rd Party) + 18% GST = ₹' + fmtINR(expected.toFixed(2)) + ' ≈ Insurance Amount ₹' + fmtINR(ins);
+        }else{
+          gstEl.className = 'gstcheck warn';
+          gstEl.textContent = '⚠ (OD + 3rd Party) + 18% GST = ₹' + fmtINR(expected.toFixed(2)) +
+            ' but Insurance Amount is ₹' + fmtINR(ins) + ' (difference ₹' + fmtINR(diff.toFixed(2)) + '). Please re-check the split.';
+        }
+      }else gstEl.className = 'gstcheck';
+    }
+
+    // dates → period, FY, month
+    const d1 = get('Date of Insurance');
+    if(d1){
+      const d = parseDMY(d1);
+      if(!get('Month')) set('Month', ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]);
+      if(!get('FY')){
+        const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear()-1;
+        set('FY', y + '-' + String((y+1)%100).padStart(2,'0'));
+      }
+      if(!get('Policy End Date')){
+        const e = new Date(d); e.setFullYear(e.getFullYear()+1); e.setDate(e.getDate()-1);
+        set('Policy End Date', toISO(toDMY(e)));
+      }
+    }
+    const d2 = get('Policy End Date');
+    if(d1 && d2) set('Insurance Period', toDMY(parseDMY(d1)) + ' to ' + toDMY(parseDMY(d2)));
+  };
+  ['Insurance Amount','Discount','OD Amount','3rd Party Amount','Payout %','Comm. %','Payout amount','Comm. Paid',
+   'Date of Insurance','Policy End Date']
+    .forEach(k => { const el = q(k); if(el) el.addEventListener('input', recalc); });
+  gridEl._recalc = recalc;
+}
+
+function collectFields(gridEl){
+  const rec = {}; let firstBad = null;
+  gridEl._invalidLabels = [];
+  gridEl.querySelectorAll('[data-k]').forEach(el => {
+    el.closest('.field')?.classList.remove('invalid');
+    let v = el.value === '__add__' ? '' : el.value;
+    if(el.type === 'date' && v) v = toDMY(parseDMY(v));
+    if(!el.checkValidity()){
+      el.closest('.field')?.classList.add('invalid');
+      gridEl._invalidLabels.push(col(el.dataset.k)?.label || el.dataset.k);
+      firstBad = firstBad || el;
+    }
+    if(el.dataset.k === 'Reference' && v) v = normalizeRef(v);
+    rec[el.dataset.k] = typeof v === 'string' ? v.trim() : v;
+  });
+  if(firstBad){ firstBad.scrollIntoView({behavior:'smooth', block:'center'}); return null; }
+  return rec;
+}
+function invalidMsg(gridEl){
+  const bad = gridEl._invalidLabels || [];
+  return 'Please fix: ' + (bad.length ? bad.join(', ') : 'highlighted fields');
+}
+function markAutofilled(gridEl, rec){
+  gridEl.querySelectorAll('[data-k]').forEach(el => {
+    if(rec[el.dataset.k]) el.closest('.field')?.classList.add('autofilled');
+  });
+}
+
+/* ---------- wizard flow ---------- */
+function startWizard(type){
+  state.wizType = type;
+  $('wizType').textContent = type;
+  $('savedMsg').classList.remove('show');
+  $('parseStatus').className = 'parsestatus';
+  $('renewalLookup').style.display = type === 'Renewal' ? 'block' : 'none';
+  $('lookupMsg').className = 'lookupmsg';
+  $('lookupReg').value = '';
+  $('step1Lede').textContent = type === 'Renewal'
+    ? 'Fetch the previous policy first — then confirm or update the details below.'
+    : 'Quick capture — the essentials first.';
+  buildFields($('grid1'), step1KeysFor(state.wizType), {'Sale Purchase':'No'}, 'w1_', false);
+  buildFields($('grid2'), STEP2_KEYS, {}, 'w2_', true);
+  gotoStep(1);
+  showPage('pageWizard');
+}
+function gotoStep(n){
+  $('step1').style.display = n===1 ? 'block' : 'none';
+  $('step2').style.display = n===2 ? 'block' : 'none';
+  $('dot1').classList.toggle('on', n===1);
+  $('dot2').classList.toggle('on', n===2);
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+$('btnToStep2').onclick = () => {
+  const rec = collectFields($('grid1'));
+  if(!rec){ toast(invalidMsg($('grid1'))); return; }
+  gotoStep(2);
+  $('grid2')._recalc && $('grid2')._recalc();
+};
+$('btnBackStep1').onclick = () => gotoStep(1);
+$('btnWizCancel1').onclick = $('btnWizCancel2').onclick = () => {
+  if(confirm('Discard this policy entry?')) showPage('pageHome');
+};
+
+$('btnWizSave').onclick = async () => {
+  const r1 = collectFields($('grid1'));
+  if(!r1){ gotoStep(1); toast('Step 1 — ' + invalidMsg($('grid1'))); return; }
+  const r2 = collectFields($('grid2'));
+  if(!r2){ toast(invalidMsg($('grid2'))); return; }
+  const rec = {...r1, ...r2, Source: state.wizType};
+  $('btnWizSave').disabled = true;
+  try{
+    if(isLive()){
+      await apiPost({action:'add', record:rec}, state.tok);
+    }else{
+      const rows = demoLoad();
+      rows.push({...rec, ID:'demo-'+Date.now(), 'Sr.No':String(rows.length+1)});
+      demoSave(rows);
+    }
+    const msg = $('savedMsg');
+    msg.textContent = '✓ ' + state.wizType + ' policy saved — ' + (rec['Name']||'') + ' · ' + (rec['Regd. Number']||'');
+    msg.classList.add('show');
+    buildFields($('grid1'), step1KeysFor(state.wizType), {'Sale Purchase':'No'}, 'w1_', false);
+    buildFields($('grid2'), STEP2_KEYS, {}, 'w2_', true);
+    $('parseStatus').className = 'parsestatus';
+    gotoStep(1);
+    setTimeout(()=>msg.classList.remove('show'), 6000);
+  }catch(err){ toast('Save failed: ' + err.message); }
+  $('btnWizSave').disabled = false;
+};
+
+/* ---------- renewal lookup ---------- */
+$('btnLookup').onclick = async () => {
+  const regno = $('lookupReg').value.trim();
+  const msg = $('lookupMsg');
+  if(!regno){ toast('Enter the car registration number first'); return; }
+  msg.className = 'lookupmsg show'; msg.textContent = 'Searching…';
+  try{
+    let prev = null;
+    if(isLive()){
+      prev = (await apiPost({action:'lookup', regno}, state.tok)).record;
+    }else{
+      demoLoad().forEach(r => { if(normReg(r['Regd. Number']) === normReg(regno)) prev = r; });
+    }
+    if(!prev){
+      msg.className = 'lookupmsg show miss';
+      msg.textContent = 'No previous policy found for ' + regno.toUpperCase() + ' — fill the details fresh below.';
+      return;
+    }
+    // prefill step 1 from history
+    const keys1 = step1KeysFor(state.wizType);
+    const r1 = {};
+    keys1.forEach(k => r1[k] = prev[k] || '');
+    buildFields($('grid1'), keys1, r1, 'w1_', false);
+    markAutofilled($('grid1'), r1);
+
+    // prefill step 2: stable details + suggested new period from the last policy
+    const r2 = {};
+    ['Vechicle Type','Name of Insurance Co.','Brokers Name','Payout %','Comm. %'].forEach(k => r2[k] = prev[k] || '');
+    const oldEnd = parseDMY(prev['Policy End Date']) ||
+      (String(prev['Insurance Period']||'').match(/(\d{1,2}\/\d{1,2}\/\d{4})\s*$/) ? parseDMY(RegExp.$1) : null);
+    if(oldEnd){
+      const start = new Date(Math.max(oldEnd.getTime() + 86400000, new Date().setHours(0,0,0,0)));
+      const end = new Date(start); end.setFullYear(end.getFullYear()+1); end.setDate(end.getDate()-1);
+      r2['Date of Insurance'] = toDMY(start);
+      r2['Policy End Date'] = toDMY(end);
+      r2['Insurance Period'] = toDMY(start) + ' to ' + toDMY(end);
+    }
+    buildFields($('grid2'), STEP2_KEYS, r2, 'w2_', true);
+    markAutofilled($('grid2'), r2);
+    $('grid2')._recalc();
+    msg.className = 'lookupmsg show found';
+    msg.textContent = '✓ Found previous policy for ' + (prev['Name']||regno.toUpperCase()) +
+      (prev['Insurance Period'] ? ' (' + prev['Insurance Period'] + ')' : '') +
+      ' — details prefilled, new period suggested. Update anything that changed.';
+  }catch(err){
+    msg.className = 'lookupmsg show miss';
+    msg.textContent = 'Lookup failed: ' + err.message;
+  }
+};
+$('lookupReg').addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); $('btnLookup').click(); } });
+
+/* =====================================================
+   PDF UPLOAD → parse and prefill both wizard steps
+   ===================================================== */
+if(window.pdfjsLib){
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+$('btnUpload').onclick = () => $('pdfInput').click();
+$('pdfInput').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  if(!window.pdfjsLib){ toast('PDF reader failed to load — check internet and reload'); return; }
+  const status = $('parseStatus');
+  status.className = 'parsestatus show';
+  status.innerHTML = 'Reading <b>' + esc(file.name) + '</b>…';
+  try{
+    const text = await extractPdfText(file);
+    const {rec, found} = parsePolicyText(text);
+    // merge with what's already typed (typed values win on step 1)
+    const keys1 = step1KeysFor(state.wizType);
+    const cur1 = collectFields($('grid1')) || {};
+    const r1 = {}; keys1.forEach(k => r1[k] = cur1[k] || rec[k] || '');
+    buildFields($('grid1'), keys1, r1, 'w1_', false);
+    markAutofilled($('grid1'), Object.fromEntries(Object.entries(rec).filter(([k,v])=>v && !cur1[k])));
+    const r2 = {}; STEP2_KEYS.forEach(k => r2[k] = rec[k] || '');
+    buildFields($('grid2'), STEP2_KEYS, r2, 'w2_', true);
+    markAutofilled($('grid2'), r2);
+    $('grid2')._recalc();
+    status.innerHTML = found.length
+      ? `<span class="found">✓ Read ${found.length} field(s) from ${esc(file.name)}</span> — highlighted on this page and the details page. Review before saving.<br>` +
+        found.map(k=>`<span class="autofill-key">${esc(col(k)?.label||k)}</span>`).join('')
+      : `<span class="missed">Could not recognise fields in ${esc(file.name)} — it may be a scanned image. Please fill manually.</span>`;
+  }catch(err){
+    status.innerHTML = `<span class="missed">Could not read this PDF (${esc(err.message)}). Please fill manually.</span>`;
+  }
+  e.target.value = '';
+});
+
+async function extractPdfText(file){
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+  let lines = [];
+  const maxPages = Math.min(pdf.numPages, 8);
+  for(let p = 1; p <= maxPages; p++){
+    const content = await (await pdf.getPage(p)).getTextContent();
+    const byY = {};
+    content.items.forEach(it => {
+      const y = Math.round(it.transform[5]);
+      (byY[y] = byY[y] || []).push(it);
+    });
+    Object.keys(byY).map(Number).sort((a,b)=>b-a).forEach(y => {
+      const line = byY[y].sort((a,b)=>a.transform[4]-b.transform[4]).map(it=>it.str).join(' ')
+        .replace(/\s+/g,' ').trim();
+      if(line) lines.push(line);
+    });
+  }
+  return lines.join('\n');
+}
+
+function parsePolicyText(text){
+  const rec = {}, found = [];
+  const grab = (key, re, clean) => {
+    const m = text.match(re);
+    if(m){
+      let v = (m[2] !== undefined ? m[2] : m[1]).trim();
+      if(clean) v = clean(v);
+      if(v){ rec[key] = v; found.push(key); return true; }
+    }
+    return false;
+  };
+  const money = s => s.replace(/[,\s]/g,'').replace(/(\.\d\d)\d+$/, '$1');
+
+  grab('Name', /Insured\s+Name\s*:?\s*(?:MR|MRS|MS|M\/S|SHRI|SMT)?\.?\s*([A-Z][A-Za-z .]{2,40}?)(?=\n|  |$)/m,
+      v => v.replace(/\s+/g,' ').trim()) ||
+  grab('Name', /Name\s+of\s+(?:the\s+)?Insured(?:\s*\/\s*Proposer)?\s*:?\s*(?:MR|MRS|MS|M\/S|SHRI|SMT)?\.?\s*([A-Z][A-Za-z .]{2,40}?)(?=\n|$)/m) ||
+  grab('Name', /\bDear\s+(?:MR|MRS|MS|SHRI|SMT)\.?\s+([A-Z][A-Z .]{2,40}?)\s*[,\n]/);
+
+  grab('Regd. Number', /\b([A-Z]{2}[-\s]?\d{1,2}[-\s]?[A-Z]{1,3}[-\s]?\d{4})\b/,
+      v => v.replace(/\s/g,'-').replace(/--+/g,'-'));
+
+  let pm = text.match(/From\s+00:?0?0\s+hours?\s+(?:of|on)?\s*(\d{1,2}\/\d{1,2}\/\d{4})\s+To\s+(?:Midnight\s+(?:of|on)?\s*)?(\d{1,2}\/\d{1,2}\/\d{4})/i)
+        || text.match(/Period\s+of\s+Insurance[^\d]{0,40}(\d{1,2}\/\d{1,2}\/\d{4})[^\d]{0,40}(\d{1,2}\/\d{1,2}\/\d{4})/i)
+        || text.match(/Risk\s+start[^\d]{0,30}(\d{1,2}\/\d{1,2}\/\d{4})[\s\S]{0,80}Risk\s+end[^\d]{0,30}(\d{1,2}\/\d{1,2}\/\d{4})/i);
+  if(pm){
+    rec['Date of Insurance'] = pm[1];
+    rec['Policy End Date'] = pm[2];
+    rec['Insurance Period'] = pm[1] + ' to ' + pm[2];
+    found.push('Date of Insurance','Policy End Date');
+  }
+
+  grab('Insurance Amount', /Total\s+Premium\s*\(rounded(?:\s+off)?[^)]*\)\s*:?\s*(?:₹|Rs\.?)?\s*([\d,]+\.?\d*)/i, money) ||
+  grab('Insurance Amount', /sum\s+of\s+Rs\.?\s*([\d,]+\.?\d*)\s+towards\s+Premium/i, money) ||
+  grab('Insurance Amount', /(?:Total|Gross)\s+Premium(?:\s+Payable)?\s*:?\s*(?:₹|Rs\.?)?\s*([\d,]+\.?\d*)/i, money);
+  grab('OD Amount', /Total\s+Own\s+Damage\s+Premium[^0-9]{0,30}([\d,]+\.?\d*)/i, money);
+  grab('3rd Party Amount', /Total\s+Liability\s+Premium[^0-9]{0,30}([\d,]+\.?\d*)/i, money);
+  grab('Policy No', /Policy\s*No\.?\s*:?\s*([A-Z0-9][A-Z0-9\/\-]{6,})/i);
+  grab('Car Name & Model', /Make(?:\s*\/\s*|\s+and\s+)Model(?:\s+of\s+vehicle(?:\s+insured)?)?\s*:?\s*([A-Z0-9][A-Z0-9 .\-\/]{3,45}?)(?=\n|$)/im);
+
+  const insurerKeys = [['Generali','Generali Central'],['ICICI','ICICI Lombard'],['HDFC','HDFC Ergo'],
+    ['Bajaj','Bajaj Allianz'],['Tata AIG','Tata AIG'],['Digit','Go Digit'],['Acko','Acko'],
+    ['Reliance General','Reliance General'],['SBI General','SBI General'],['New India','New India Assurance'],
+    ['National Insurance','National Insurance'],['Oriental','Oriental Insurance'],['United India','United India'],
+    ['Cholamandalam','Cholamandalam MS'],['IFFCO','IFFCO Tokio'],['Royal Sundaram','Royal Sundaram'],
+    ['Magma','Magma HDI'],['Liberty','Liberty General'],['Shriram','Shriram General'],
+    ['Universal Sompo','Universal Sompo'],['Kotak','Zurich Kotak'],['Navi','Navi General']];
+  for(const [kw, name] of insurerKeys)
+    if(new RegExp(kw,'i').test(text)){ rec['Name of Insurance Co.'] = name; found.push('Name of Insurance Co.'); break; }
+
+  const vt = [['Private Car','Private Car'],['Two Wheeler','Two Wheeler'],['Motor Cycle','Two Wheeler'],
+    ['Scooter','Two Wheeler'],['Commercial','Commercial Vehicle'],['Taxi','Taxi'],['Three Wheeler','Three Wheeler']];
+  for(const [kw, name] of vt)
+    if(new RegExp(kw,'i').test(text)){ rec['Vechicle Type'] = name; found.push('Vechicle Type'); break; }
+
+  grab('Cust. Mobile Number', /Mobile\s*no\.?\s*:?\s*([6-9]\d{9})\b/i);
+
+  return {rec, found};
+}
+
+/* =====================================================
+   SEE DATASET (admin)
+   ===================================================== */
+async function reload(){
+  try{
+    state.rows = isLive() ? await apiGet(state.tok) : demoLoad();
+    state.selected.clear(); renderAll();
+    maybeNotify();
+  }catch(err){ toast('Load failed: ' + err.message); }
+}
+$('btnRefresh').onclick = reload;
+
+/* ---------- global facets (e-commerce style) ---------- */
+const FACETS = [
+  {key:'Year',                label:'Year',              get:r=>yearOf(r)},
+  {key:'Month',               label:'Month',             get:r=>r.Month||'', order:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']},
+  {key:'Source',              label:'Policy Type',       get:r=>r.Source||''},
+  {key:'Sale Purchase',       label:'Sale Purchase',     get:r=>r['Sale Purchase']||''},
+  {key:'RC Cleared',          label:'RC Cleared',        get:r=>r['RC Cleared']||'', order:['Yes','No']},
+  {key:'Status',              label:'Status',            get:r=>({active:'Active',soon:'Expiring ≤ 30 days',expired:'Expired',unknown:'Unknown'})[policyStatus(r).s],
+                              order:['Active','Expiring ≤ 30 days','Expired','Unknown']},
+  {key:'Name of Insurance Co.', label:'Insurance Company', get:r=>r['Name of Insurance Co.']||''},
+  {key:'Brokers Name',        label:'Broker',            get:r=>r['Brokers Name']||''},
+  {key:'Reference',           label:'Reference',         get:r=>r.Reference||''},
+  {key:'Vechicle Type',       label:'Vehicle Type',      get:r=>r['Vechicle Type']||''},
+  {key:'Payment Source',      label:'Payment',           get:r=>r['Payment Source']||''},
+  {key:'Mode of Payment',     label:'Mode of Payment',   get:r=>r['Mode of Payment']||''},
+  {key:'Mode of Received',    label:'Mode of Received',  get:r=>r['Mode of Received']||''},
+  {key:'Payment Received',    label:'Payment Received',  get:r=>r['Payment Received']||'', order:['Yes','No']},
+  {key:'FY',                  label:'FY (tax style)',    get:r=>r.FY||''},
+];
+state.facets = {};   // key -> Set of selected values
+
+function rowsAfterSearch(){
+  const q = $('q').value.trim().toLowerCase();
+  if(!q) return state.rows;
+  return state.rows.filter(r =>
+    COLS.some(c => String(r[c.k] ?? '').toLowerCase().includes(q)) ||
+    yearOf(r).includes(q));
+}
+function facetPass(r, exceptKey){
+  return FACETS.every(f => {
+    if(f.key === exceptKey) return true;
+    const sel = state.facets[f.key];
+    return !sel || !sel.size || sel.has(f.get(r));
+  });
+}
+function filteredRows(){
+  const base = TAB_DEFS[state.dsTab].test;
+  return rowsAfterSearch().filter(r => facetPass(r, null) && base(r));
+}
+function activeFacetCount(){
+  return Object.values(state.facets).reduce((a,s)=>a+(s?s.size:0),0);
+}
+function renderFacets(){
+  const base = rowsAfterSearch();
+  $('facetList').innerHTML = FACETS.map(f => {
+    const sel = state.facets[f.key] || new Set();
+    // counts within rows passing every *other* facet (standard e-commerce behaviour)
+    const pool = base.filter(r => facetPass(r, f.key));
+    const counts = {};
+    pool.forEach(r => { const v = f.get(r); if(v) counts[v] = (counts[v]||0)+1; });
+    let values = Object.keys(counts);
+    values = f.order
+      ? f.order.filter(v=>counts[v]).concat(values.filter(v=>!f.order.includes(v)).sort())
+      : values.sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
+    [...sel].forEach(v => { if(!values.includes(v)) values.push(v); }); // keep selected even at 0
+    if(!values.length) return '';
+    return `<div class="facet ${sel.size?'hasActive':''}" data-facet="${esc(f.key)}">
+      <h3>${esc(f.label)} <button class="fclear">clear</button></h3>
+      <div class="opts">${values.map(v => `
+        <label><input type="checkbox" value="${esc(v)}" ${sel.has(v)?'checked':''}>
+          <span>${esc(v)}</span><span class="cnt">${counts[v]||0}</span></label>`).join('')}
+      </div></div>`;
+  }).join('');
+  $('facetList').querySelectorAll('.facet').forEach(el => {
+    const key = el.dataset.facet;
+    el.querySelectorAll('input[type=checkbox]').forEach(cb => cb.onchange = () => {
+      state.facets[key] = state.facets[key] || new Set();
+      cb.checked ? state.facets[key].add(cb.value) : state.facets[key].delete(cb.value);
+      state.page = 1; renderAll();
+    });
+    el.querySelector('.fclear').onclick = () => { state.facets[key] = new Set(); renderAll(); };
+  });
+  const n = activeFacetCount();
+  $('filterBadge').style.display = n ? 'inline-block' : 'none';
+  $('filterBadge').textContent = n;
+}
+function renderAll(){ renderFacets(); renderTable(); renderStats(); renderReminders(); renderSelbar(); }
+
+/* ---------- column visibility ---------- */
+const DATASET_COLS = () => COLS.filter(c => c.k !== 'Sr.No' && c.k !== 'FY').map(c => c.k);
+state.visibleCols = new Set(DATASET_COLS());   // replaced by the active tab's set in loadTab()
+function saveCols(){
+  savedTabCols[state.dsTab] = [...state.visibleCols];
+  localStorage.setItem('cars99.tabcols', JSON.stringify(savedTabCols));
+}
+
+/* Views as tabs — each tab has its own base filter, columns, facets,
+   search and page; they never interact with each other. */
+function isCars99Due(r){
+  return r['Payment Source'] === 'CARS99' && r['Payment Received'] !== 'Yes';
+}
+function isRcPending(r){
+  return r['Sale Purchase'] === 'Yes' && r['RC Cleared'] !== 'Yes';
+}
+const PAYMENT_PRESET_COLS = ['Name','Regd. Number','Insurance Amount','Discount','Net Customer Amount',
+  'Payment Source','Mode of Payment','Mode of Received','Payment Received'];
+const SP_PRESET_COLS = ['Name','Regd. Number','Car Name & Model','Reference','Sale Purchase','RC Cleared'];
+
+const TAB_DEFS = {
+  all: { test: () => true,   defCols: () => DATASET_COLS() },
+  pay: { test: isCars99Due,  defCols: () => PAYMENT_PRESET_COLS },
+  sp:  { test: isRcPending,  defCols: () => SP_PRESET_COLS },
+};
+state.dsTab = 'all';
+state.tabState = {};            // tab -> {facets, q, page, cols}
+const savedTabCols = JSON.parse(localStorage.getItem('cars99.tabcols') || '{}');
+
+function tabStateFor(tab){
+  if(!state.tabState[tab]){
+    state.tabState[tab] = {
+      facets: {}, q: '', page: 1,
+      cols: new Set(savedTabCols[tab] || TAB_DEFS[tab].defCols()),
+    };
+  }
+  return state.tabState[tab];
+}
+function loadTab(tab){
+  const t = tabStateFor(tab);
+  state.dsTab = tab;
+  state.facets = t.facets;
+  state.page = t.page;
+  state.visibleCols = t.cols;
+  $('q').value = t.q;
+  document.querySelectorAll('.dstab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+}
+function stashTab(){
+  const t = tabStateFor(state.dsTab);
+  t.facets = state.facets; t.page = state.page; t.cols = state.visibleCols; t.q = $('q').value;
+}
+function switchDsTab(tab){
+  if(tab === state.dsTab) return;
+  if(state.dsTab !== 'brokers') stashTab();
+  if(tab === 'brokers'){
+    state.dsTab = 'brokers';
+    document.querySelectorAll('.dstab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    $('policyView').style.display = 'none';
+    $('brokerView').style.display = 'block';
+    initBrokerView();
+  }else{
+    $('policyView').style.display = '';
+    $('brokerView').style.display = 'none';
+    loadTab(tab);
+    renderAll();
+  }
+}
+document.querySelectorAll('.dstab').forEach(b => b.onclick = () => switchDsTab(b.dataset.tab));
+
+/* ---------- staged inline edits (Mode of Received + Payment Received) ---------- */
+state.pendingEdits = {};   // id -> {field: value}
+state.page = 1;
+const PAGE_SIZE = 10;
+
+function stageEdit(id, field, value){
+  const old = state.rows.find(r=>r.ID===id) || {};
+  state.pendingEdits[id] = state.pendingEdits[id] || {};
+  if((old[field]||'') === value) delete state.pendingEdits[id][field];
+  else state.pendingEdits[id][field] = value;
+  if(!Object.keys(state.pendingEdits[id]).length) delete state.pendingEdits[id];
+  renderSaveBar();
+}
+const stagedVal = (r, field) => state.pendingEdits[r.ID]?.[field] ?? (r[field] || '');
+const pendingCount = () => Object.values(state.pendingEdits).reduce((a,o)=>a+Object.keys(o).length,0);
+
+function renderSaveBar(){
+  const n = pendingCount();
+  $('saveBar').classList.toggle('show', n>0);
+  $('saveCount').textContent = n + ' unsaved change' + (n===1?'':'s');
+}
+$('btnDiscardEdits').onclick = () => { state.pendingEdits = {}; renderSaveBar(); renderTable(); };
+$('btnSaveEdits').onclick = async () => {
+  const ids = Object.keys(state.pendingEdits);
+  if(!ids.length) return;
+  $('btnSaveEdits').disabled = true;
+  try{
+    for(const id of ids){
+      const old = state.rows.find(r=>r.ID===id);
+      if(!old) continue;
+      const rec = {...old, ...state.pendingEdits[id]};
+      if(isLive()) await apiPost({action:'update', id, record:rec}, state.tok);
+      else{
+        const rows = demoLoad();
+        const i = rows.findIndex(r=>r.ID===id);
+        if(i>-1){ rows[i] = rec; demoSave(rows); }
+      }
+      Object.assign(old, state.pendingEdits[id]);
+    }
+    state.pendingEdits = {};
+    renderSaveBar();
+    toast('Saved ' + ids.length + ' row(s)');
+    renderAll();          // re-runs the dues filter — paid rows drop out
+  }catch(err){ toast('Save failed: ' + err.message); }
+  $('btnSaveEdits').disabled = false;
+};
+
+function renderColsList(){
+  $('colsList').innerHTML = '<div class="facet hasActive"><h3>Show columns</h3><div class="opts" style="max-height:none">' +
+    DATASET_COLS().map(k => `
+      <label><input type="checkbox" value="${esc(k)}" ${state.visibleCols.has(k)?'checked':''}>
+        <span>${esc(col(k)?.label||k)}</span></label>`).join('') +
+    '</div></div>';
+  $('colsList').querySelectorAll('input[type=checkbox]').forEach(cb => cb.onchange = () => {
+    cb.checked ? state.visibleCols.add(cb.value) : state.visibleCols.delete(cb.value);
+    saveCols(); renderTable();
+  });
+}
+$('btnColumns').onclick = () => { renderColsList(); $('columnsDrawer').classList.add('open'); };
+$('btnCloseColumns').onclick = () => $('columnsDrawer').classList.remove('open');
+$('btnColsAll').onclick = () => { state.visibleCols = new Set(TAB_DEFS[state.dsTab].defCols()); saveCols(); renderColsList(); renderTable(); };
+
+function renderTable(){
+  // Dataset shows calendar Year (from Date of Insurance) instead of tax-style FY
+  const showCols = COLS.filter(c => c.k !== 'Sr.No' && c.k !== 'FY' && state.visibleCols.has(c.k));
+  $('theadRow').innerHTML = '<th><input type="checkbox" id="selAll" aria-label="Select all"></th><th>Year</th>' +
+    showCols.map(c=>`<th class="${c.t==='money'||c.t==='pct'?'num':''}">${esc(c.label||c.k)}</th>`).join('') +
+    '<th>Status</th><th></th>';
+
+  const rows = filteredRows();
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  if(state.page > pages) state.page = pages;
+  const pageRows = rows.slice((state.page-1)*PAGE_SIZE, state.page*PAGE_SIZE);
+  $('pgInfo').textContent = 'Page ' + state.page + ' of ' + pages + ' · ' + rows.length + ' rows';
+  $('pgPrev').disabled = state.page <= 1;
+  $('pgNext').disabled = state.page >= pages;
+
+  $('selAll').onchange = e => {
+    pageRows.forEach(r => e.target.checked ? state.selected.add(r.ID) : state.selected.delete(r.ID));
+    renderTable(); renderSelbar();
+  };
+  $('emptyState').style.display = rows.length ? 'none' : 'block';
+
+  $('tbody').innerHTML = pageRows.map(r => {
+    const st = policyStatus(r);
+    const pill = st.s==='active' ? `<span class="pill ok">${st.days}d left</span>` :
+                 st.s==='soon'   ? `<span class="pill soon">${st.days}d left</span>` :
+                 st.s==='expired'? `<span class="pill expired">expired</span>` : '';
+    const unpaid = isCars99Due(r) ? ' <span class="pill unpaid">₹ due</span>' : '';
+    const cells = showCols.map(c => {
+      const v = r[c.k] ?? '';
+      if(c.k==='Payment Received'){
+        const val = stagedVal(r,'Payment Received');
+        const staged = state.pendingEdits[r.ID]?.['Payment Received'] !== undefined;
+        return `<td class="paycell"><input type="checkbox" class="paytoggle ${staged?'staged':''}" ${val==='Yes'?'checked':''}
+          title="Tick when payment received from customer" aria-label="Payment received"></td>`;
+      }
+      if(c.k==='RC Cleared'){
+        const val = stagedVal(r,'RC Cleared');
+        const staged = state.pendingEdits[r.ID]?.['RC Cleared'] !== undefined;
+        return `<td class="paycell"><input type="checkbox" class="rctoggle paytoggle ${staged?'staged':''}" ${val==='Yes'?'checked':''}
+          title="Tick when the RC transfer is cleared" aria-label="RC cleared"></td>`;
+      }
+      if(c.k==='Mode of Received'){
+        const val = stagedVal(r,'Mode of Received');
+        const staged = state.pendingEdits[r.ID]?.['Mode of Received'] !== undefined;
+        return `<td><select class="recvsel ${staged?'staged':''}" title="How the customer paid CARS99 back">
+          <option value=""></option>
+          ${listFor('recvMode').map(o=>`<option ${o===val?'selected':''}>${esc(o)}</option>`).join('')}
+          ${(val && !listFor('recvMode').includes(val)) ? `<option selected>${esc(val)}</option>` : ''}
+        </select></td>`;
+      }
+      if(c.t==='money') return `<td class="num">${v!=='' ? fmtINR(num(v)) : ''}</td>`;
+      if(c.t==='pct')   return `<td class="num">${v!=='' ? esc(v)+'%' : ''}</td>`;
+      if(c.k==='Regd. Number' && v) return `<td><span class="plate">${esc(v)}</span></td>`;
+      return `<td>${esc(v)}</td>`;
+    }).join('');
+    return `<tr class="${state.selected.has(r.ID)?'selected':''}" data-id="${esc(r.ID)}">
+      <td><input type="checkbox" class="rowsel" ${state.selected.has(r.ID)?'checked':''} aria-label="Select row"></td>
+      <td class="num">${esc(yearOf(r))}</td>
+      ${cells}<td>${pill}${unpaid}</td>
+      <td class="rowact"><button class="edit">Edit</button><button class="fetch" title="Fetch car details (paid lookup ~₹3)">🚗</button><button class="del">Delete</button></td></tr>`;
+  }).join('');
+
+  $('tbody').querySelectorAll('tr').forEach(tr => {
+    const id = tr.dataset.id;
+    tr.querySelector('.rowsel').onchange = e => {
+      e.target.checked ? state.selected.add(id) : state.selected.delete(id);
+      tr.classList.toggle('selected', e.target.checked); renderSelbar();
+    };
+    const pay = tr.querySelector('.paytoggle:not(.rctoggle)');
+    if(pay) pay.onchange = () => { stageEdit(id, 'Payment Received', pay.checked ? 'Yes' : 'No'); pay.classList.add('staged'); };
+    const rc = tr.querySelector('.rctoggle');
+    if(rc) rc.onchange = () => { stageEdit(id, 'RC Cleared', rc.checked ? 'Yes' : 'No'); rc.classList.add('staged'); };
+    const recv = tr.querySelector('.recvsel');
+    if(recv) recv.onchange = () => { stageEdit(id, 'Mode of Received', recv.value); recv.classList.add('staged'); };
+    tr.querySelector('.edit').onclick = () => {
+      if(!id){ toast('This row has no ID (typed directly into the sheet). Run assignIds() once in Apps Script, then Refresh.'); return; }
+      openEdit(id);
+    };
+    tr.querySelector('.fetch').onclick = () => fetchCarDetails(id);
+    tr.querySelector('.del').onclick = async () => {
+      if(!id){ toast('This row has no ID — delete it directly in the Google Sheet.'); return; }
+      if(confirm('Delete this policy record?')) await doDelete([id]);
+    };
+  });
+}
+
+function renderStats(){
+  const rows = filteredRows();
+  const sums = k => rows.reduce((a,r)=>a+num(r[k]),0);
+  const soon = state.rows.filter(r=>policyStatus(r).s==='soon').length;
+  const expired = state.rows.filter(r=>policyStatus(r).s==='expired').length;
+  $('stats').innerHTML = `
+    <div class="stat"><div class="label">Policies shown</div><div class="value">${rows.length}</div></div>
+    <div class="stat"><div class="label">Insurance amount</div><div class="value">₹${fmtINR(sums('Insurance Amount'))}</div></div>
+    <div class="stat"><div class="label">Net customer amount</div><div class="value">₹${fmtINR(sums('Net Customer Amount'))}</div></div>
+    <div class="stat"><div class="label">Payout amount</div><div class="value">₹${fmtINR(sums('Payout amount'))}</div></div>
+    <div class="stat"><div class="label">Net Cars99 payout</div><div class="value">₹${fmtINR(sums('Net Cars99 Payout'))}</div></div>
+    <div class="stat ${(soon+expired)?'alert':''}"><div class="label">Renewals due</div><div class="value">${soon} soon · ${expired} expired</div></div>`;
+}
+function renderSelbar(){
+  const n = state.selected.size;
+  $('selbar').classList.toggle('show', n>0);
+  if(!n) return;
+  $('selCount').textContent = n + ' selected';
+  const rows = state.rows.filter(r=>state.selected.has(r.ID));
+  $('selSums').innerHTML = MONEY_TOTALS.map(k =>
+    `<span>${esc(k)}: <b>₹${fmtINR(rows.reduce((a,r)=>a+num(r[k]),0))}</b></span>`).join('');
+}
+function renderReminders(){
+  const due = state.rows.map(r=>({r, st:policyStatus(r)}))
+    .filter(x=>x.st.s==='soon'||x.st.s==='expired')
+    .sort((a,b)=>(a.st.days??999)-(b.st.days??999));
+  const unpaid = state.rows.filter(isCars99Due);
+  const total = due.length + unpaid.length;
+  $('dueBadge').style.display = unpaid.length ? 'inline-block' : 'none';
+  $('dueBadge').textContent = unpaid.length;
+  const rcPending = state.rows.filter(isRcPending).length;
+  $('rcBadge').style.display = rcPending ? 'inline-block' : 'none';
+  $('rcBadge').textContent = rcPending;
+  ['remBadge','remBadgeTop'].forEach(id => {
+    $(id).style.display = total ? 'inline-block' : 'none';
+    $(id).textContent = total;
+  });
+  let html = '';
+  if(unpaid.length){
+    html += '<h3 style="font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--red)">CARS99 dues — remind customer</h3>';
+    html += unpaid.map(r => `
+      <div class="rem expired">
+        <div class="who">${esc(r.Name||'—')} · <span style="font-family:var(--mono);font-size:.78rem">${esc(r['Regd. Number']||'')}</span></div>
+        <div class="meta">₹${fmtINR(num(r['Net Customer Amount']||r['Insurance Amount']))} pending · ${esc(r['Cust. Mobile Number']||'')}</div>
+        <div class="when">${esc(r['Insurance Period']||'')}</div>
+      </div>`).join('');
+  }
+  if(due.length){
+    html += '<h3 style="font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--soft);margin-top:'+(unpaid.length?'10px':'0')+'">Renewals due</h3>';
+    html += due.map(({r,st}) => `
+      <div class="rem ${st.s}">
+        <div class="who">${esc(r.Name||'—')} · <span style="font-family:var(--mono);font-size:.78rem">${esc(r['Regd. Number']||'')}</span></div>
+        <div class="meta">${esc(r['Name of Insurance Co.']||'')} · ₹${fmtINR(num(r['Insurance Amount']))} · ${esc(r['Cust. Mobile Number']||'')}</div>
+        <div class="when">${st.s==='expired' ? 'Expired ' + toDMY(st.end) : 'Expires ' + toDMY(st.end) + ' (' + st.days + ' days)'}</div>
+      </div>`).join('');
+  }
+  $('remList').innerHTML = html || '<p style="color:var(--soft);font-size:.85rem">Nothing due — no renewals in the next 30 days and no pending payments.</p>';
+}
+
+/* ---------- edit / delete ---------- */
+function openEdit(id){
+  state.editingId = id;
+  const rec = state.rows.find(r=>r.ID===id) || {};
+  buildFields($('editGrid'), [...STEP1_KEYS, ...STEP2_KEYS], rec, 'e_', true);
+  // Editing must never be blocked by strict entry rules or legacy data:
+  // drop hard-required, and if an existing value already violates its
+  // pattern (e.g. masked mobile 99******29 from old records), waive the pattern
+  $('editGrid').querySelectorAll('[data-k]').forEach(el => {
+    el.required = false;
+    if(el.pattern && el.value && !el.checkValidity()) el.removeAttribute('pattern');
+    el.closest('.field')?.querySelectorAll('.req').forEach(r => r.remove());
+  });
+  $('editOverlay').classList.add('open');
+}
+let _savingEdit = false;
+async function saveEditRecord(){
+  if(_savingEdit) return;
+  _savingEdit = true;
+  try{
+    const edited = collectFields($('editGrid'));
+    if(!edited){ toast(invalidMsg($('editGrid'))); return; }
+    const old = state.rows.find(r=>r.ID===state.editingId);
+    if(!old || !state.editingId){
+      toast('This row has no ID (it was typed directly into the sheet). Run assignIds() once in Apps Script, then Refresh.');
+      return;
+    }
+    const rec = {...old, ...edited};
+    $('btnSaveEdit').disabled = true;
+    if(isLive()){
+      await apiPost({action:'update', id:state.editingId, record:rec}, state.tok);
+    }else{
+      const rows = demoLoad();
+      const i = rows.findIndex(r=>r.ID===state.editingId);
+      if(i>-1){ rows[i] = {...rec, ID:state.editingId}; demoSave(rows); }
+    }
+    $('editOverlay').classList.remove('open');
+    toast('Policy updated');
+    await reload();
+  }catch(err){
+    toast('Update failed: ' + (err && err.message ? err.message : String(err)));
+    console.error('saveEditRecord failed:', err);
+  }finally{
+    _savingEdit = false;
+    $('btnSaveEdit').disabled = false;
+  }
+}
+$('btnSaveEdit').onclick = saveEditRecord;
+$('editForm').onsubmit = e => { e.preventDefault(); saveEditRecord(); };
+// Enter anywhere in the form saves too (type=button removed implicit submission)
+$('editForm').addEventListener('keydown', e => {
+  if(e.key === 'Enter' && e.target.tagName !== 'TEXTAREA'){ e.preventDefault(); saveEditRecord(); }
+});
+$('btnCancelEdit').onclick = () => $('editOverlay').classList.remove('open');
+
+async function doDelete(ids){
+  try{
+    if(isLive()) await apiPost({action:'delete', ids}, state.tok);
+    else demoSave(demoLoad().filter(r=>!ids.includes(r.ID)));
+    ids.forEach(id=>state.selected.delete(id));
+    toast('Deleted');
+    await reload();
+  }catch(err){ toast('Delete failed: ' + err.message); }
+}
+$('btnDeleteSel').onclick = async () => {
+  if(confirm('Delete ' + state.selected.size + ' selected record(s)?')) await doDelete([...state.selected]);
+};
+$('btnClearSel').onclick = () => { state.selected.clear(); renderTable(); renderSelbar(); };
+
+/* ---------- CSV / reminders / notifications / sync ---------- */
+$('btnExport').onclick = () => {
+  const keys = COLS.map(c=>c.k);
+  const csv = [keys.join(',')].concat(filteredRows().map(r =>
+    keys.map(k => `"${String(r[k]??'').replace(/"/g,'""')}"`).join(','))).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+  a.download = 'cars99-policies-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+};
+$('btnActions').onclick = () => $('actionsDrawer').classList.add('open');
+$('btnCloseActions').onclick = () => $('actionsDrawer').classList.remove('open');
+$('btnReminders').onclick = () => {
+  $('actionsDrawer').classList.remove('open');
+  $('drawer').classList.add('open');
+};
+$('btnCloseDrawer').onclick = () => $('drawer').classList.remove('open');
+$('btnNotify').onclick = async () => {
+  const perm = await Notification.requestPermission();
+  toast(perm==='granted' ? 'Alerts enabled for this browser' : 'Alerts blocked in browser settings');
+  if(perm==='granted') localStorage.setItem('cars99.notify','1');
+};
+function maybeNotify(){
+  if(localStorage.getItem('cars99.notify')!=='1' || Notification.permission!=='granted') return;
+  const due = state.rows.filter(r=>{const s=policyStatus(r).s; return s==='soon'||s==='expired';}).length;
+  const unpaid = state.rows.filter(isCars99Due).length;
+  if(due+unpaid) new Notification('CARS99 — attention needed',
+    {body: (due? due+' renewal(s) due' : '') + (due&&unpaid? ' · ' : '') + (unpaid? unpaid+' payment(s) pending' : '')});
+}
+$('btnSyncDrive').onclick = () => syncFromDrive();
+$('btnSyncWA').onclick = () => syncFromWhatsApp();
+async function syncFromDrive(){
+  /* TODO (planned): scan a Google Drive folder for newly dropped policy PDFs
+     via an Apps Script endpoint (action:'driveSync'), parse server-side, append rows. */
+  toast('Drive sync is coming soon — Refresh already pulls the latest sheet data');
+}
+async function syncFromWhatsApp(){
+  /* TODO (planned): read policy messages/attachments from the WhatsApp group
+     (WhatsApp Business API webhook → Apps Script), parse, append. */
+  toast('WhatsApp sync is coming soon — placeholder for the group reader');
+}
+
+/* ---------- settings / filters / toast / boot ---------- */
+$('q').addEventListener('input', () => { state.page = 1; renderAll(); });
+$('pgPrev').onclick = () => { if(state.page>1){ state.page--; renderTable(); } };
+$('pgNext').onclick = () => { state.page++; renderTable(); };
+$('btnFilters').onclick = () => $('filterDrawer').classList.add('open');
+$('btnCloseFilters').onclick = () => $('filterDrawer').classList.remove('open');
+$('btnClearFacets').onclick = () => { state.facets = {}; renderAll(); };
+function openSettings(){
+  $('setUrl').value = state.cfg.url || '';
+  $('settingsOverlay').classList.add('open');
+}
+$('btnSettings').onclick = openSettings;
+$('btnCloseSettings').onclick = () => $('settingsOverlay').classList.remove('open');
+$('btnSaveSettings').onclick = () => {
+  state.cfg = {url: $('setUrl').value.trim()};
+  localStorage.setItem('cars99.cfg', JSON.stringify(state.cfg));
+  $('settingsOverlay').classList.remove('open');
+  setConn();
+  toast(isLive() ? 'Connected — login with your passcode' : 'Demo mode (passcodes: staff / cars99)');
+};
+document.querySelectorAll('.overlay').forEach(o =>
+  o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); }));
+
+let toastTimer;
+function toast(msg, type){
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type === 'success' ? ' success' : '');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 4000);
+}
+
+/* =====================================================
+   BROKERS — receivables from Fresh/Renewal payouts,
+   payments recorded manually, FIFO settlement by month
+   ===================================================== */
+const fmtL = n => Math.abs(n) >= 100000 ? (n/100000).toFixed(n % 100000 ? 1 : 0) + 'L' : fmtINR(n);
+const MONTHS3 = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function brokerPolicies(broker){
+  return state.rows.filter(r =>
+    (r.Source === 'Fresh' || r.Source === 'Renewal') &&
+    (r['Brokers Name'] || '').trim().toLowerCase() === broker.trim().toLowerCase());
+}
+function brokerNames(){
+  const set = new Map();
+  listFor('broker').forEach(b => set.set(b.toLowerCase(), b));
+  state.rows.forEach(r => {
+    const b = (r['Brokers Name'] || '').trim();
+    if(b && (r.Source === 'Fresh' || r.Source === 'Renewal')) set.set(b.toLowerCase(), b);
+  });
+  return [...set.values()].sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
+}
+
+/* Per-month ledger with a cumulative Due balance.
+   Payments are recorded AGAINST a month (ForMonth); Due carries forward:
+   due[i] = due[i-1] + receivable[i] - received[i].
+   Months with zero cumulative due are hidden; if the final due is zero,
+   everything is cleared and nothing is shown. */
+const mKey = (y,m) => String(m+1).padStart(2,'0') + '/' + y;
+const mLabel = k => { const [mm,yy] = k.split('/'); return MONTHS3[+mm-1] + ' ' + yy; };
+const prevMonthKey = k => { const [mm,yy] = k.split('/').map(Number);
+  const d = new Date(yy, mm-2, 1); return mKey(d.getFullYear(), d.getMonth()); };
+function payMonthKey(p){
+  if(p.ForMonth && /^\d{2}\/\d{4}$/.test(p.ForMonth)) return p.ForMonth;
+  const d = parseDMY(p.Date);                  // legacy fallback: month of payment date
+  return d ? mKey(d.getFullYear(), d.getMonth()) : null;
+}
+function brokerLedger(broker, payments){
+  const recv = new Map(), paid = new Map();
+  brokerPolicies(broker).forEach(r => {
+    const d = parseDMY(r['Date of Insurance']);
+    const amt = num(r['Payout amount']);
+    if(!d || !amt) return;
+    // the bill for a month = payouts of the PREVIOUS insurance month,
+    // so a policy is billed in insurance month + 1 (Dec rolls into Jan)
+    const bill = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+    const k = mKey(bill.getFullYear(), bill.getMonth());
+    recv.set(k, (recv.get(k)||0) + amt);
+  });
+  payments.forEach(p => {
+    const k = payMonthKey(p);
+    if(k) paid.set(k, (paid.get(k)||0) + num(p.Amount));
+  });
+  const keys = [...new Set([...recv.keys(), ...paid.keys()])]
+    .sort((a,b) => (a.slice(3)+a.slice(0,2)).localeCompare(b.slice(3)+b.slice(0,2)));
+  let cum = 0;
+  const rows = keys.map(k => {
+    const due = recv.get(k)||0, got = paid.get(k)||0;
+    cum += due - got;
+    return {key:k, recvbl:due, recvd:got, cum:Math.round(cum*100)/100};
+  });
+  const finalDue = rows.length ? rows[rows.length-1].cum : 0;
+  const cleared = Math.abs(finalDue) <= 0.005;
+  const visible = cleared ? [] : rows.filter(r => Math.abs(r.cum) > 0.005);
+  return {
+    rows, visible, cleared,
+    contextKeys: new Set(visible.map(r=>r.key)),
+    monthKeys: keys,
+    totalDue: rows.reduce((a,r)=>a+r.recvbl,0),
+    totalPaid: rows.reduce((a,r)=>a+r.recvd,0),
+    pending: finalDue,
+  };
+}
+
+/* ---- storage: BrokerPayments + Brokers sheets (demo: localStorage) ---- */
+async function brokerFetch(broker){
+  if(isLive()) return await apiPost({action:'brokerData', broker}, state.tok);
+  const pays = JSON.parse(localStorage.getItem('cars99.bpay') || '{}');
+  const profs = JSON.parse(localStorage.getItem('cars99.bprof') || '{}');
+  return {ok:true, payments: pays[broker] || [], profile: profs[broker] || {}};
+}
+async function brokerPayAdd(rec){
+  if(isLive()) return await apiPost({action:'brokerPayAdd', record:rec}, state.tok);
+  const pays = JSON.parse(localStorage.getItem('cars99.bpay') || '{}');
+  rec.ID = rec.ID || 'bp-' + Date.now();
+  (pays[rec.Broker] = pays[rec.Broker] || []).push(rec);
+  localStorage.setItem('cars99.bpay', JSON.stringify(pays));
+  return {ok:true};
+}
+async function brokerPayDelete(rec){
+  if(isLive()) return await apiPost({action:'brokerPayDelete', id:rec.ID}, state.tok);
+  const pays = JSON.parse(localStorage.getItem('cars99.bpay') || '{}');
+  pays[rec.Broker] = (pays[rec.Broker] || []).filter(x => x.ID !== rec.ID);
+  localStorage.setItem('cars99.bpay', JSON.stringify(pays));
+  return {ok:true};
+}
+async function brokerPayUpdate(rec){
+  if(isLive()) return await apiPost({action:'brokerPayUpdate', id:rec.ID, record:rec}, state.tok);
+  const pays = JSON.parse(localStorage.getItem('cars99.bpay') || '{}');
+  const arr = pays[rec.Broker] || [];
+  const i = arr.findIndex(x => x.ID === rec.ID);
+  if(i > -1) arr[i] = rec;
+  localStorage.setItem('cars99.bpay', JSON.stringify(pays));
+  return {ok:true};
+}
+async function brokerProfileSave(profile){
+  if(isLive()) return await apiPost({action:'brokerProfileSave', profile}, state.tok);
+  const profs = JSON.parse(localStorage.getItem('cars99.bprof') || '{}');
+  profs[profile.Broker] = profile;
+  localStorage.setItem('cars99.bprof', JSON.stringify(profs));
+  return {ok:true};
+}
+
+/* ---- view ---- */
+let brokerCur = '', brokerPayments = [];
+
+function initBrokerView(){
+  const sel = $('brokerSel');
+  const names = brokerNames();
+  sel.innerHTML = '<option value="">— choose a broker —</option>' +
+    names.map(n => `<option ${n===brokerCur?'selected':''}>${esc(n)}</option>`).join('');
+  if(!$('bpMode').options.length)
+    $('bpMode').innerHTML = listFor('recvMode').filter(m=>m!=='Pending')
+      .map(m=>`<option>${esc(m)}</option>`).join('');
+  if(!$('bpDate').value) $('bpDate').value = new Date().toISOString().slice(0,10);
+  if(brokerCur) renderBroker(); else showBrokerEmpty(true);
+}
+function showBrokerEmpty(empty){
+  $('brokerEmpty').style.display = empty ? 'block' : 'none';
+  $('brokerStats').style.display = empty ? 'none' : 'block';
+  $('brokerCard').style.display = empty ? 'none' : 'block';
+}
+$('brokerSel').addEventListener('change', async () => {
+  brokerCur = $('brokerSel').value;
+  $('brokerMonths').style.display = 'none';
+  if(!brokerCur){ showBrokerEmpty(true); return; }
+  await renderBroker();
+});
+
+let brokerLed = null, bpPage = 1, bpEditingId = null;
+
+async function renderBroker(){
+  showBrokerEmpty(false);
+  let res;
+  try{ res = await brokerFetch(brokerCur); }
+  catch(err){ toast('Could not load broker data: ' + err.message); return; }
+  brokerPayments = (res.payments || []).map(p => ({...p}));
+  // payments recorded before editing existed have no ID — heal them so Edit works
+  let healed = false;
+  brokerPayments.forEach((pm, i) => {
+    if(!pm.ID){ pm.ID = 'bp-heal-' + Date.now() + '-' + i; healed = true; }
+  });
+  if(healed && !isLive()){
+    const pays = JSON.parse(localStorage.getItem('cars99.bpay') || '{}');
+    pays[brokerCur] = brokerPayments;
+    localStorage.setItem('cars99.bpay', JSON.stringify(pays));
+  }
+  const led = brokerLed = brokerLedger(brokerCur, brokerPayments);
+
+  const pct = led.totalDue ? Math.min(100, led.totalPaid/led.totalDue*100) : 0;
+  $('pFill').style.width = pct + '%';
+  $('pRecv').textContent = '₹' + fmtL(led.totalPaid);
+  $('pTotal').textContent = '₹' + fmtL(led.totalDue);
+  $('pMid').textContent = '';
+  const pend = $('pPending');
+  if(led.pending > 0.005){
+    pend.className = 'pendamt';
+    pend.textContent = 'Pending Amount: ₹' + fmtL(led.pending);
+  }else if(led.pending < -0.005){
+    pend.className = 'pendamt ok';
+    pend.textContent = 'Advance with CARS99: ₹' + fmtL(-led.pending);
+  }else{
+    pend.className = 'pendamt ok';
+    pend.textContent = 'All settled 🎉';
+  }
+
+  // months table: only months whose cumulative due ≠ 0 (Due itself stays hidden)
+  $('brokerMonthBody').innerHTML = led.visible.length ? led.visible.map(r => `
+    <tr><td>${mLabel(prevMonthKey(r.key))}</td><td>${mLabel(r.key)}</td>
+      <td class="num">${fmtINR(r.recvbl)}</td>
+      <td class="num">${fmtINR(r.recvd)}</td></tr>`).join('')
+    : '<tr><td colspan="4" style="color:var(--soft)">All cleared — nothing outstanding. 🎉</td></tr>';
+
+  renderBpTable();
+
+  // details card
+  const pols = brokerPolicies(brokerCur);
+  $('bdName').textContent = brokerCur;
+  $('brokerCard').classList.remove('editing');
+  const prof = res.profile || {};
+  [['Contact','bdContact'],['Email','bdEmail'],['Tenure','bdTenure']].forEach(([k, id]) => {
+    $(id).value = prof[k] || '';
+    $(id + 'V').textContent = prof[k] || '—';
+  });
+  $('bdCount').textContent = pols.length;
+  $('bdBusiness').textContent = '₹' + fmtINR(brokerLed.totalDue);
+}
+
+/* payments table — only records for the months in context, paged, editable */
+function contextPayments(){
+  if(!brokerLed || brokerLed.cleared) return [];
+  return brokerPayments
+    .filter(p => brokerLed.contextKeys.has(payMonthKey(p)))
+    .sort((a,b)=>(parseDMY(b.Date)||0) - (parseDMY(a.Date)||0));
+}
+function renderBpTable(){
+  const all = contextPayments();
+  $('bpRecords').style.display = all.length ? 'block' : 'none';
+  if(!all.length) return;
+  const pages = Math.max(1, Math.ceil(all.length / 10));
+  if(bpPage > pages) bpPage = pages;
+  const pageRows = all.slice((bpPage-1)*10, bpPage*10);
+  $('bpInfo').textContent = 'Page ' + bpPage + ' of ' + pages + ' · ' + all.length + ' records';
+  $('bpPrev').disabled = bpPage <= 1;
+  $('bpNext').disabled = bpPage >= pages;
+
+  $('bpTableBody').innerHTML = pageRows.map(pm => {
+    if(pm.ID === bpEditingId){
+      const modeOpts = listFor('recvMode').filter(m=>m!=='Pending').map(m =>
+        `<option ${m===pm.Mode?'selected':''}>${esc(m)}</option>`).join('');
+      return `<tr data-id="${esc(pm.ID)}" class="editingrow">
+        <td>${mLabel(payMonthKey(pm)||'01/1970')}</td>
+        <td><input type="date" class="e-date" value="${toISO(pm.Date)}"></td>
+        <td><select class="e-mode">${modeOpts}</select></td>
+        <td class="num"><input type="number" step="0.01" class="e-amt" value="${esc(pm.Amount)}" style="text-align:right"></td>
+        <td><input class="e-rem" value="${esc(pm.Remarks||'')}"></td>
+        <td class="rowact"><button class="bp-save">Save</button><button class="bp-cancel">Cancel</button></td></tr>`;
+    }
+    return `<tr data-id="${esc(pm.ID)}">
+      <td>${mLabel(payMonthKey(pm)||'01/1970')}</td>
+      <td>${esc(pm.Date)}</td><td>${esc(pm.Mode||'')}</td>
+      <td class="num">${fmtINR(num(pm.Amount))}</td><td>${esc(pm.Remarks||'')}</td>
+      <td class="rowact"><button class="bp-edit">Edit</button><button class="bp-del del">Delete</button></td></tr>`;
+  }).join('');
+
+  $('bpTableBody').querySelectorAll('tr').forEach(tr => {
+    const id = tr.dataset.id;
+    tr.querySelector('.bp-edit')?.addEventListener('click', () => { bpEditingId = id; renderBpTable(); });
+    tr.querySelector('.bp-del')?.addEventListener('click', async () => {
+      const pm = brokerPayments.find(x => x.ID === id);
+      if(!pm) return;
+      if(!confirm('Delete this payment?\n₹' + fmtINR(num(pm.Amount)) + ' · ' + mLabel(payMonthKey(pm)||'01/1970') + ' · ' + (pm.Date||''))) return;
+      try{
+        await brokerPayDelete(pm);
+        toast('Payment deleted — dues recalculated');
+        await renderBroker();
+      }catch(err){ toast('Could not delete: ' + err.message); }
+    });
+    tr.querySelector('.bp-cancel')?.addEventListener('click', () => { bpEditingId = null; renderBpTable(); });
+    tr.querySelector('.bp-save')?.addEventListener('click', async () => {
+      const pm = brokerPayments.find(x => x.ID === id);
+      const amt = num(tr.querySelector('.e-amt').value);
+      if(!amt || amt < 0){ toast('Enter a valid amount'); return; }
+      const newDate = parseDMY(tr.querySelector('.e-date').value);
+      const upd = {...pm,
+        Date: newDate ? toDMY(newDate) : pm.Date,
+        ForMonth: newDate ? mKey(newDate.getFullYear(), newDate.getMonth()) : pm.ForMonth,
+        Mode: tr.querySelector('.e-mode').value,
+        Amount: String(amt),
+        Remarks: tr.querySelector('.e-rem').value.trim(),
+      };
+      try{
+        await brokerPayUpdate(upd);
+        bpEditingId = null;
+        toast('Payment updated', 'success');
+        await renderBroker();
+      }catch(err){ toast('Could not update: ' + err.message); }
+    });
+  });
+}
+$('bpPrev').onclick = () => { if(bpPage>1){ bpPage--; renderBpTable(); } };
+$('bpNext').onclick = () => { bpPage++; renderBpTable(); };
+
+$('btnGetDetails').onclick = () => {
+  const el = $('brokerMonths');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+};
+$('btnBpSave').onclick = async () => {
+  const amt = num($('bpAmount').value);
+  if(!brokerCur){ toast('Select a broker first'); return; }
+  if(!amt || amt <= 0){ toast('Enter a valid amount'); return; }
+  const payDate = parseDMY($('bpDate').value) || new Date();
+  const forMonth = mKey(payDate.getFullYear(), payDate.getMonth());
+  const rec = {
+    Broker: brokerCur,
+    ForMonth: forMonth,
+    Date: toDMY(payDate),
+    Mode: $('bpMode').value,
+    Amount: String(amt),
+    Remarks: $('bpRemarks').value.trim(),
+  };
+  $('btnBpSave').disabled = true;
+  try{
+    await brokerPayAdd(rec);
+    $('bpAmount').value = ''; $('bpRemarks').value = '';
+    toast('Received ₹' + fmtINR(amt) + ' from ' + brokerCur + ' for ' + mLabel(forMonth) + ' 🎉', 'success');
+    await renderBroker();
+    if($('brokerMonths').style.display !== 'none') $('brokerMonths').style.display = 'block';
+  }catch(err){ toast('Could not save payment: ' + err.message); }
+  $('btnBpSave').disabled = false;
+};
+$('btnBdEdit').onclick = () => $('brokerCard').classList.add('editing');
+$('btnBdCancel').onclick = () => {
+  // revert inputs to the reader values and exit edit mode
+  [['bdContact'],['bdEmail'],['bdTenure']].forEach(([id]) => {
+    const v = $(id + 'V').textContent;
+    $(id).value = v === '—' ? '' : v;
+  });
+  $('brokerCard').classList.remove('editing');
+};
+$('btnBdSave').onclick = async () => {
+  if(!brokerCur) return;
+  $('btnBdSave').disabled = true;
+  try{
+    const prof = {Broker: brokerCur, Contact: $('bdContact').value.trim(),
+      Email: $('bdEmail').value.trim(), Tenure: $('bdTenure').value.trim()};
+    await brokerProfileSave(prof);
+    [['Contact','bdContact'],['Email','bdEmail'],['Tenure','bdTenure']].forEach(([k, id]) =>
+      $(id + 'V').textContent = prof[k] || '—');
+    $('brokerCard').classList.remove('editing');
+    toast('Broker details saved');
+  }catch(err){ toast('Could not save details: ' + err.message); }
+  $('btnBdSave').disabled = false;
+};
+
+/* ---------- car details lookup (admin, per row) ---------- */
+let carLookupResult = null, carLookupRowId = null;
+
+async function fetchCarDetails(id){
+  if(state.role !== 'admin'){ toast('Car lookup is admin-only'); return; }
+  const row = state.rows.find(r=>r.ID===id);
+  if(!row || !row['Regd. Number']){ toast('This row has no registration number'); return; }
+  const regno = row['Regd. Number'];
+  if(!confirm('Fetch details for ' + regno + '?\nParivahan is tried first; if it fails, the paid RC API is used (~₹3 per lookup).')) return;
+
+  toast('Looking up ' + regno + '…');
+  try{
+    let res;
+    if(isLive()){
+      res = await apiPost({action:'carLookup', regno}, state.tok);
+    }else{
+      // No backend connected: attempt both providers directly from the browser.
+      // No mock data — real attempts, real failures (usually CORS/captcha).
+      const tried = [];
+      let record = null;
+      try{
+        const r = await fetch('https://vahan.parivahan.gov.in/nrservices/', {mode:'cors'});
+        if(!r.ok) throw new Error('HTTP ' + r.status);
+        await r.json();
+        tried.push({provider:'Parivahan', error:'responded, but no machine-readable RC data (captcha/login gate)'});
+      }catch(e){ tried.push({provider:'Parivahan', error:e.message}); }
+      try{
+        const r = await fetch('https://www.acko.com/api/app/vehicleInfo/?regno=' +
+          encodeURIComponent(normReg(regno)), {mode:'cors'});
+        if(!r.ok) throw new Error('HTTP ' + r.status);
+        const data = await r.json();
+        record = (data && (data.result || data.data || data)) || null;
+        if(record && !Object.keys(record).length) record = null;
+      }catch(e){ tried.push({provider:'Paid RC API', error:e.message + ' (browser CORS — connect Google Sheets for the server-side lookup)'}); }
+      res = record ? {ok:true, tried, record} : {ok:false, tried};
+    }
+    (res.tried||[]).forEach(t => toast(t.provider + ' lookup failed: ' + t.error));
+    if(!res.ok || !res.record){ toast('Car lookup failed — all providers errored'); return; }
+    openCarModal(id, regno, res.record);
+  }catch(err){
+    toast('Car lookup failed: ' + err.message);
+  }
+}
+
+function openCarModal(id, regno, rec){
+  carLookupResult = rec; carLookupRowId = id;
+  $('carReg').textContent = regno;
+  $('carHint').textContent = 'Fetched from the RC lookup provider. "Apply to row" fills only columns that are currently empty (model, vehicle type, name, insurer, policy end date). Other details are view-only.';
+  $('carBody').innerHTML = '<table class="cartab">' +
+    Object.entries(rec).map(([k,v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('') +
+    '</table>';
+  $('btnApplyCar').style.display = 'inline-flex';
+  $('carOverlay').classList.add('open');
+}
+$('btnCloseCar').onclick = () => $('carOverlay').classList.remove('open');
+$('btnApplyCar').onclick = async () => {
+  const rec = carLookupResult, id = carLookupRowId;
+  if(!rec || !id) return;
+  const old = state.rows.find(r=>r.ID===id);
+  if(!old) return;
+  // fetched field -> our column; applied ONLY where the column is currently empty
+  const MAP = [
+    ['Car Name & Model', 'Car Name & Model', v=>v],
+    ['Vehicle Class',    'Vechicle Type',    v=>/motor car|lmv/i.test(v) ? 'Private Car'
+                                             : /motor cycle|scooter|two/i.test(v) ? 'Two Wheeler' : ''],
+    ['Owner',            'Name',             v=>v],
+    ['Insurer',          'Name of Insurance Co.', v=>v],
+    ['Insurance Expiry', 'Policy End Date',  v=>v],
+  ];
+  const upd = {...old}, filled = [];
+  for(const [from, to, fn] of MAP){
+    if(rec[from] && !(old[to] && String(old[to]).trim())){
+      const v = fn(rec[from]);
+      if(v){ upd[to] = v; filled.push(col(to)?.label || to); }
+    }
+  }
+  if(!filled.length){
+    toast('No empty columns to fill — nothing changed (fetched details are view-only here)');
+    $('carOverlay').classList.remove('open');
+    return;
+  }
+  $('btnApplyCar').disabled = true;
+  try{
+    if(isLive()) await apiPost({action:'update', id, record:upd}, state.tok);
+    else{
+      const rows = demoLoad();
+      const i = rows.findIndex(r=>r.ID===id);
+      if(i>-1){ rows[i] = upd; demoSave(rows); }
+    }
+    $('carOverlay').classList.remove('open');
+    toast('Filled empty column(s): ' + filled.join(', '));
+    await reload();
+  }catch(err){ toast('Apply failed: ' + err.message); }
+  $('btnApplyCar').disabled = false;
+};
+
+/* nothing may fail silently: surface every uncaught error as a toast */
+const APP_VERSION = 'v3.27';
+window.addEventListener('error', e => toast('App error: ' + (e.message || 'unknown') + ' — please report this'));
+window.addEventListener('unhandledrejection', e =>
+  toast('App error: ' + (e.reason && e.reason.message ? e.reason.message : e.reason) + ' — please report this'));
+$('verLogin').textContent = APP_VERSION;
+document.title = 'CARS99 — Insurance CRM ' + APP_VERSION;
+console.log('CARS99 CRM', APP_VERSION);
+
+setConn();
+if(state.role && state.tok) enterApp(); else showPage('pageLogin');
+</script>
+</body>
+</html>
