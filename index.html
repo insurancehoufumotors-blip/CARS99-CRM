@@ -217,6 +217,15 @@ td.num,th.num{text-align:right;font-family:var(--mono);font-size:.82rem}
 #pageReports{background:var(--white);min-height:calc(100vh - 54px);padding-bottom:1px}
 
 /* ---- brokers view ---- */
+.brokerchips{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
+.bchip{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--line);
+  background:var(--white);border-radius:24px;padding:8px 16px 8px 8px;font-weight:700;
+  font-size:.88rem;cursor:pointer;transition:all .15s;color:var(--black)}
+.bchip .avat{width:26px;height:26px;border-radius:50%;background:#eee;display:grid;
+  place-items:center;font-size:.72rem;font-weight:800;color:var(--soft)}
+.bchip:hover{border-color:var(--black);transform:translateY(-1px)}
+.bchip.on{background:var(--red);border-color:var(--red);color:#fff;box-shadow:0 4px 12px rgba(213,0,28,.3)}
+.bchip.on .avat{background:rgba(255,255,255,.25);color:#fff}
 .brokerwrap{display:flex;gap:26px;padding:24px 26px 60px;flex-wrap:wrap}
 .brokermain{flex:1;min-width:340px}
 .bsec{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;font-weight:800;
@@ -468,9 +477,9 @@ td.paycell{text-align:center}
   <div id="brokerView" style="display:none">
     <div class="brokerwrap">
       <div class="brokermain">
-        <div class="field" style="max-width:340px">
-          <label for="brokerSel">Select broker</label>
-          <select id="brokerSel"><option value="">— choose a broker —</option></select>
+        <div class="field">
+          <label>Select broker</label>
+          <div class="brokerchips" id="brokerChips"></div>
         </div>
 
         <div id="brokerEmpty" class="empty" style="padding:40px 10px">
@@ -1887,10 +1896,19 @@ async function brokerProfileSave(profile){
 let brokerCur = '', brokerPayments = [];
 
 function initBrokerView(){
-  const sel = $('brokerSel');
   const names = brokerNames();
-  sel.innerHTML = '<option value="">— choose a broker —</option>' +
-    names.map(n => `<option ${n===brokerCur?'selected':''}>${esc(n)}</option>`).join('');
+  const initials = n => n.split(/[\s\/]+/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('');
+  $('brokerChips').innerHTML = names.length
+    ? names.map(n => `<button class="bchip ${n===brokerCur?'on':''}" data-b="${esc(n)}">
+        <span class="avat">${esc(initials(n))}</span>${esc(n)}</button>`).join('')
+    : '<span style="color:var(--soft);font-size:.85rem">No brokers yet — they appear from policies and the broker list.</span>';
+  $('brokerChips').querySelectorAll('.bchip').forEach(ch => ch.onclick = async () => {
+    brokerCur = ch.dataset.b;
+    bpPage = 1; bpEditingId = null;
+    $('brokerMonths').style.display = 'none';
+    $('brokerChips').querySelectorAll('.bchip').forEach(c => c.classList.toggle('on', c === ch));
+    await renderBroker();
+  });
   if(!$('bpMode').options.length)
     $('bpMode').innerHTML = listFor('recvMode').filter(m=>m!=='Pending')
       .map(m=>`<option>${esc(m)}</option>`).join('');
@@ -1902,13 +1920,6 @@ function showBrokerEmpty(empty){
   $('brokerStats').style.display = empty ? 'none' : 'block';
   $('brokerCard').style.display = empty ? 'none' : 'block';
 }
-$('brokerSel').addEventListener('change', async () => {
-  brokerCur = $('brokerSel').value;
-  $('brokerMonths').style.display = 'none';
-  if(!brokerCur){ showBrokerEmpty(true); return; }
-  await renderBroker();
-});
-
 let brokerLed = null, bpPage = 1, bpEditingId = null;
 
 async function renderBroker(){
@@ -2192,7 +2203,7 @@ $('btnApplyCar').onclick = async () => {
 };
 
 /* nothing may fail silently: surface every uncaught error as a toast */
-const APP_VERSION = 'v3.27';
+const APP_VERSION = 'v3.28';
 window.addEventListener('error', e => toast('App error: ' + (e.message || 'unknown') + ' — please report this'));
 window.addEventListener('unhandledrejection', e =>
   toast('App error: ' + (e.reason && e.reason.message ? e.reason.message : e.reason) + ' — please report this'));
