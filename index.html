@@ -6,7 +6,6 @@
 <title>CARS99 — Insurance CRM</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 :root{
   --black:#111111; --soft:#4b4b4b; --white:#ffffff; --paper:#f7f7f7; --line:#e4e4e4;
@@ -807,12 +806,53 @@ function policyStatus(r){
 }
 
 /* ---------- API / demo store ---------- */
+/* Snapshot cache. Held in memory and mirrored to sessionStorage, so a
+   reload is instant but nothing survives closing the tab — the register
+   must not sit in storage on a shared device after logout. */
+const SNAP_KEY = 'cars99.snapshot';
+let _snap = null;        // {version, headers, values}
+let _expanded = null;    // {version, rows} — objects, built on demand
+
+function snapRead(){
+  try{ const raw = sessionStorage.getItem(SNAP_KEY); return raw ? JSON.parse(raw) : null; }
+  catch(e){ return null; }
+}
+function snapWrite(s){
+  try{
+    if(s === null) sessionStorage.removeItem(SNAP_KEY);
+    else sessionStorage.setItem(SNAP_KEY, JSON.stringify(s));
+  }catch(e){ /* quota or private mode; the memory copy still works */ }
+}
+function snapExpand(snap){
+  if(!snap) return [];
+  if(_expanded && _expanded.version === snap.version) return _expanded.rows;
+  const rows = snap.values.map(v => {
+    const o = {};
+    for(let i = 0; i < snap.headers.length; i++) o[snap.headers[i]] = v[i];
+    return o;
+  });
+  _expanded = { version: snap.version, rows };
+  return rows;
+}
+function snapClear(){ _snap = null; _expanded = null; snapWrite(null); }
+
 async function apiGet(token){
+  if(!_snap) _snap = snapRead();
   const u = new URL(state.cfg.url);
   u.searchParams.set('token', token);
+  if(_snap && _snap.version) u.searchParams.set('version', _snap.version);
+
   const j = await (await fetch(u)).json();
   if(!j.ok) throw new Error(j.error || 'API error');
-  return j.rows;
+
+  if(j.notModified && _snap) return snapExpand(_snap);
+
+  if(j.headers && j.values){                       // v3.1 compact payload
+    _snap = { version: j.version || String(Date.now()), headers: j.headers, values: j.values };
+    snapWrite(_snap);
+    return snapExpand(_snap);
+  }
+  return j.rows || [];                             // v3 backend, still works
 }
 async function apiPost(payload, token){
   payload.token = token;
@@ -868,11 +908,15 @@ function enterApp(){
   $('cardDataset').style.display = state.role === 'admin' ? 'block' : 'none';
   $('loginPass').value = '';
   showPage('pageHome');
+  /* Warm the Apps Script container and fill the cache while the user is
+     still looking at the home cards. No DOM work, so it is safe here. */
+  if(isLive() && state.role === 'admin') apiGet(state.tok).catch(() => {});
 }
 $('btnLogin').onclick = () => login($('loginPass').value.trim());
 $('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') $('btnLogin').click(); });
 $('btnLogout').onclick = () => {
   state.role = state.tok = null; state.rows = []; state.selected.clear();
+  snapClear();
   sessionStorage.removeItem('cars99.role'); sessionStorage.removeItem('cars99.tok');
   showPage('pageLogin');
 };
@@ -1157,16 +1201,32 @@ $('lookupReg').addEventListener('keydown', e => { if(e.key==='Enter'){ e.prevent
 /* =====================================================
    PDF UPLOAD → parse and prefill both wizard steps
    ===================================================== */
-if(window.pdfjsLib){
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
-    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+let _pdfjsReady = null;
+function loadPdfJs(){
+  if(_pdfjsReady) return _pdfjsReady;
+  _pdfjsReady = new Promise((resolve, reject) => {
+    if(window.pdfjsLib){ resolve(); return; }
+    const sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    sc.onload = () => {
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      resolve();
+    };
+    sc.onerror = () => reject(new Error('PDF reader failed to load'));
+    document.head.appendChild(sc);
+  });
+  return _pdfjsReady;
 }
 $('btnUpload').onclick = () => $('pdfInput').click();
 $('pdfInput').addEventListener('change', async e => {
   const file = e.target.files[0];
   if(!file) return;
-  if(!window.pdfjsLib){ toast('PDF reader failed to load — check internet and reload'); return; }
   const status = $('parseStatus');
+  status.className = 'parsestatus show';
+  status.innerHTML = 'Loading PDF reader…';
+  try{ await loadPdfJs(); }
+  catch(e){ status.className='parsestatus'; toast('PDF reader failed to load — check internet and reload'); return; }
   status.className = 'parsestatus show';
   status.innerHTML = 'Reading <b>' + esc(file.name) + '</b>…';
   try{
@@ -1275,12 +1335,25 @@ function parsePolicyText(text){
 /* =====================================================
    SEE DATASET (admin)
    ===================================================== */
+let _reloading = null;
 async function reload(){
-  try{
-    state.rows = isLive() ? await apiGet(state.tok) : demoLoad();
-    state.selected.clear(); renderAll();
-    maybeNotify();
-  }catch(err){ toast('Load failed: ' + err.message); }
+  /* Paint whatever is cached immediately, so opening the tab is not a
+     blank screen waiting on a round trip. The network result overwrites
+     it a moment later if anything actually changed. */
+  if(isLive() && !state.rows.length){
+    if(!_snap) _snap = snapRead();
+    if(_snap){ state.rows = snapExpand(_snap); state.selected.clear(); renderAll(); }
+  }
+  if(_reloading) return _reloading;              // collapse rapid double clicks
+  _reloading = (async () => {
+    try{
+      state.rows = isLive() ? await apiGet(state.tok) : demoLoad();
+      state.selected.clear(); renderAll();
+      maybeNotify();
+    }catch(err){ toast('Load failed: ' + err.message); }
+    finally{ _reloading = null; }
+  })();
+  return _reloading;
 }
 $('btnRefresh').onclick = reload;
 
@@ -2203,7 +2276,7 @@ $('btnApplyCar').onclick = async () => {
 };
 
 /* nothing may fail silently: surface every uncaught error as a toast */
-const APP_VERSION = 'v3.28';
+const APP_VERSION = 'v3.29';
 window.addEventListener('error', e => toast('App error: ' + (e.message || 'unknown') + ' — please report this'));
 window.addEventListener('unhandledrejection', e =>
   toast('App error: ' + (e.reason && e.reason.message ? e.reason.message : e.reason) + ' — please report this'));
